@@ -181,9 +181,9 @@ int main(int argc , char *argv[])
             while( (read_size = recv(client_sock , client_message , 2000 , 0)) > 0 )
             {
                 if(strlen(client_message)) {
-                    printf("the recved: %s\n", client_message);
+                   // printf("receive: %s\n", client_message);
                     int cmd = get_operation(client_message);
-                    printf("cmd: %d\n", cmd);
+                   // printf("cmd: %d\n", cmd);
                     fflush(0);
 
                     switch (cmd) {
@@ -193,7 +193,7 @@ int main(int argc , char *argv[])
                             if(fd >= 0)
                                 close(fd);
                         
-                            printf("parse %s\n", client_message);
+                           // printf("parse %s\n", client_message);
                             char * filename = get_str(client_message, "<name>", "</name>");
                             int length = get_int(client_message, "<length>", "</length>");
                             int size = get_int(client_message, "<size>", "</size>");
@@ -237,7 +237,8 @@ int main(int argc , char *argv[])
                             printf("call delete\n");
                             char * del_key = get_str(client_message, "<key>", "</key>");
 
-                            delete(del_key);
+                            if(delete(del_key))
+                                printf("failed to delete\n");
 
                             free(del_key);
                             break;
