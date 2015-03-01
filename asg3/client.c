@@ -1,6 +1,3 @@
-/*
-    C ECHO client example using sockets
-*/
 #include <stdio.h> //printf
 #include <string.h>    //strlen
 #include <sys/socket.h>    //socket

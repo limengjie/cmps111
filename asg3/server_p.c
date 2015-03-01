@@ -1,7 +1,3 @@
-/*
-    C socket server example
-*/
- 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>    //strlen
@@ -9,13 +5,12 @@
 #include <arpa/inet.h> //inet_addr
 #include <unistd.h>    //write
 
-//#include "hashTable.c"
-
 
 extern int initialize(char *file, int length, int size);
 extern int insert(char *key, void *value, int length);
 extern int fetch (char *key, void *value, int *length);
 extern int delete(char *key);
+extern int probe(char *key);
 
 extern int fd;
 
@@ -123,6 +118,7 @@ int main(int argc , char *argv[])
     int socket_desc , client_sock , c , read_size;
     struct sockaddr_in server , client;
     char client_message[2000];
+    char server_message[2000];
      
     //Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
@@ -198,26 +194,27 @@ int main(int argc , char *argv[])
                             int length = get_int(client_message, "<length>", "</length>");
                             int size = get_int(client_message, "<size>", "</size>");
 
-                            printf("filename is %s\n", filename);
-                            printf("length is %d, size is %d \n", length, size);
+                            sprintf(server_message, "filename is %s length is %d, size is %d", 
+                                    filename, length, size);
 
                             fd = initialize(filename, length , size);
+    
                             free (filename);
                             break;
                         case GET:
                             printf("call fetch\n");
                             int slot;
                             char * get_key = get_str(client_message, "<key>", "</key>");
-                            char * get_value = get_str(client_message, "<value>", "</value>");
-                            int get_len = strlen(get_value);
-                            int * get_len_ptr = &get_len;
+                            void * get_value = malloc(MAX_DATA_SIZE);
+                            int sz = sizeof(get_value);
 
-                            slot = fetch (get_key, (void *)get_value, get_len_ptr);
-
-                            if (slot != -1)
-                                printf("%s is found at slot[%d]\n", get_key, slot);
-                            else
-                                printf("%s is not found\n", get_key);
+                            if((slot = fetch(get_key, get_value, &sz)) == -1)
+                                     sprintf(server_message, "404 not found");
+                            else {
+                             //   printf("%s is found at slot[%d]\n", get_key, slot);
+                              //  printf("value is %s", (char*)get_value);
+                                sprintf(server_message, "200 OK\n <value>%s</value>", (char *)get_value);
+                            }
 
                             free(get_key);
                             free(get_value);
@@ -228,7 +225,10 @@ int main(int argc , char *argv[])
                             char * put_value = get_str(client_message, "<value>", "</value>");
                             int put_len = strlen(put_value);
                            
-                            insert(put_key, (void *)put_value, put_len);
+                            if (insert(put_key, (void *)put_value, put_len) == -1)
+                                sprintf(server_message, "hash table is full");
+                            else
+                                sprintf(server_message, "201 OK");
 
                             free(put_key);
                             free(put_value);
@@ -238,17 +238,19 @@ int main(int argc , char *argv[])
                             char * del_key = get_str(client_message, "<key>", "</key>");
 
                             if(delete(del_key))
-                                printf("failed to delete\n");
+                                sprintf(server_message, "404 not found");
+                            else
+                                sprintf(server_message, "delete successfully");
 
                             free(del_key);
                             break;
                         default:
-                            printf("Invalid command\n");
+                            sprintf(server_message, "513 LUL WUT?");
                             break;
                     }
                 //Send the message back to client
-                write(client_sock , client_message , strlen(client_message));
-                memset(client_message, 0, 2000);
+                write(client_sock , server_message , strlen(server_message));
+                memset(server_message, 0, 2000);
                 } // endIf
             }
             if(read_size == 0)
