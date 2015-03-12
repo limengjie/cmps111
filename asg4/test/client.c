@@ -2,12 +2,134 @@
 #include <string.h>    //strlen
 #include <sys/socket.h>    //socket
 #include <arpa/inet.h> //inet_addr
+#include <unistd.h>
+
+#include "md5.h"
+#include "base64.h"
  
+// #define INQUIRY 0
+// #define FETCH 1
+// #define INSERT 2
+// #define DELETE 3
+// #define INVALID 99
+
+// #define BLOCKS 500
+// #define LEN 80
+
+
+// int get_operation(char *cmd)
+// {
+//     char str[][7] = { "INQUIRY" , "FETCH" , "INSERT", "DELETE"};
+//     int n;
+
+//     char fn_file[20];
+//     int op;
+//     if (!strncmp (str[0],cmd, 7)){
+//         op = INQUIRY;
+
+//     }
+//     else if(!strncmp (str[1],cmd, 5)) {
+//         op = FETCH;
+//            }
+//     else if(!strncmp (str[2],cmd, 6)) {
+//         op = INSERT;
+
+//     }
+//     else if(!strncmp (str[3],cmd, 6)) {
+//         op = DELETE;
+//     }
+//     else{
+//         op = INVALID;
+        
+//     }
+//     return op;
+// }
+
+// char * get_str(const char * input, 
+//     const char * str_start, const char * str_end)
+// {
+//   const char * start, * end;
+
+//   if((start = strstr(input, str_start)) != NULL)
+//   {
+//     start += strlen(str_start);
+//     if((end = strstr(start, str_end)) != NULL)
+//     {
+//       char *out = malloc(end - start + 1);
+//       if(out != NULL)
+//       {
+//         memcpy(out, start, (end - start));
+//         out[end - start] = '\0';
+//         return out;
+//       }
+//     }
+//   }
+//   return NULL;
+// }
+
+// int get_blks(char * command, char ** blocks) {
+//     // open a file
+//     char * filename = get_str(command, "<name>", "</name>");
+//     // printf("filename is %s\n", filename);
+//     FILE * fp;
+//     fp = fopen(filename, "r");
+//     if (fp == NULL) {
+//         fprintf(stderr, "no such file!\n");
+//         exit(1);
+//     }
+
+//     // read and divde a file into serveral blocks
+//     int c, i, j, blks;
+//     // char blocks[BLOCKS][LEN];
+//     while ((c = fgetc(fp)) != EOF && j < BLOCKS) {
+//         blocks[j][i++] = c;
+//         if (i == LEN - 1) {
+//             blocks[j++][i] = '\0';
+//             i = 0;
+//         }
+//     }
+//     blks = j;
+//     for (i = 0; i < blks; ++i) {
+//         printf("%d\n %s\n", i, blocks[i]);
+//     }
+//     return blks;
+// }
+
+void packet(char * block, char * msg) {
+    // encode md5
+    unsigned char * msg_digest = MDString(block);
+    // int i;
+    // for (i = 0; i < 16; ++i) {
+    //     printf("%x", msg_digest[i]);
+    // }
+    // printf("\n");
+
+    // endoe base64
+    char * output;
+    size_t blk_sz;
+    output = base64_encode(block, strlen(block), &blk_sz);
+    // printf("base64 encode: %s\n", output); 
+    printf("block size = %d\n", blk_sz);
+    // packet message
+    int i, j;
+    for (i = 0; i < 16; ++i)
+        msg[i] = msg_digest[i];
+    msg[i++] = ',';
+    for (j = 0; j < strlen(output); ++j)
+        msg[i++] = output[j];
+    msg[i++] = ',';
+    printf("block: %s\n", &msg[17]); 
+    char length = (char)strlen(output);
+    msg[i++] = length;
+    msg[i] = '\0';
+    // printf("length = %d\n", (int)msg[strlen(msg)-1]);
+}
+
 int main(int argc , char *argv[])
 {
     int sock;
     struct sockaddr_in server;
-    char message[1000] , server_reply[2000];
+    char command[100], message[1000] , server_reply[2000];
      
     //Create socket
     sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -34,10 +156,52 @@ int main(int argc , char *argv[])
     //keep communicating with server
     while(1)
     {
-        printf("Enter message : ");
-        //scanf("%s" , message);
-       scanf ("%[^\n]%*c", message);
-        
+        printf("Enter command: ");
+        scanf ("%[^\n]%*c", command);
+        int cmd, msg_len;
+        cmd = get_operation(command);
+        // printf("cmd(%d):%s\n", cmd, command);
+
+        if (cmd == INSERT) {
+            // open a file
+            char * filename = get_str(command, "<name>", "</name>");
+            // printf("filename is %s\n", filename);
+            FILE * fp;
+            fp = fopen(filename, "r");
+            if (fp == NULL) {
+                fprintf(stderr, "no such file!\n");
+                exit(1);
+            }
+
+            // read and divde a file into serveral blocks
+            int c, i, j, blks;
+            char blocks[BLOCKS][LEN];
+            while ((c = fgetc(fp)) != EOF && j < BLOCKS) {
+                blocks[j][i++] = c;
+                if (i == LEN - 1) {
+                    blocks[j++][i] = '\0';
+                    i = 0;
+                }
+            }
+            blks = j;
+            // for (i = 0; i < blks; ++i) {
+            //     printf("%d\n %s\n", i, blocks[i]);
+            // }  
+
+            // packet and send message
+            for (i = 0; i < 1; ++i) {
+                memset(message, 0, 1000);
+                packet(blocks[i], message);
+                if( write(sock , message , strlen(message)) < 0)
+                {
+                    puts("Send failed");
+                    return 1;
+                }
+            }        
+        } //end if
+         
+
+                
         //Send some data
         if( write(sock , message , strlen(message)) < 0)
         {

@@ -5,6 +5,8 @@
 #include <arpa/inet.h> //inet_addr
 #include <unistd.h>    //write
 
+#include "md5.h"
+
 
 extern int initialize(char *file, int length, int size);
 extern int insert(char *key, void *value, int length);
@@ -14,102 +16,102 @@ extern int probe(char *key);
 
 extern int fd;
 
-#define INIT 0
-#define GET 1
-#define PUT 2
-#define DEL 3
-#define INVALID 99
+// #define INQUIRY 0
+// #define FETCH 1
+// #define INSERT 2
+// #define DELETE 3
+// #define INVALID 99
 
 #define MAX_KEY_SIZE 100
 #define MAX_DATA_SIZE 1000
 #define FILLED 0xDEADD00D
 
-char * get_str(const char * input, 
-    const char * str_start, const char * str_end)
-{
-  const char * start, * end;
+// char * get_str(const char * input, 
+//     const char * str_start, const char * str_end)
+// {
+//   const char * start, * end;
 
-  if((start = strstr(input, str_start)) != NULL)
-  {
-    start += strlen(str_start);
-    if((end = strstr(start, str_end)) != NULL)
-    {
-      char *out = malloc(end - start + 1);
-      if(out != NULL)
-      {
-        memcpy(out, start, (end - start));
-        out[end - start] = '\0';
-        return out;
-      }
-    }
-  }
-  return NULL;
-}
+//   if((start = strstr(input, str_start)) != NULL)
+//   {
+//     start += strlen(str_start);
+//     if((end = strstr(start, str_end)) != NULL)
+//     {
+//       char *out = malloc(end - start + 1);
+//       if(out != NULL)
+//       {
+//         memcpy(out, start, (end - start));
+//         out[end - start] = '\0';
+//         return out;
+//       }
+//     }
+//   }
+//   return NULL;
+// }
 
 
 
-int get_int(const char * input, 
-    const char * str_start, const char * str_end)
-{
-    const char *start, *end;
-    int res;
+// int get_int(const char * input, 
+//     const char * str_start, const char * str_end)
+// {
+//     const char *start, *end;
+//     int res;
  
-    if((start = strstr(input, str_start)) != NULL)
-    {
-      start += strlen(str_start);
-      if((end = strstr(start, str_end)) != NULL)
-      {
-        char *out = malloc(end - start + 1);
-        if(out != NULL)
-        {
-          memcpy(out, start, (end - start));
-          out[end - start] = '\0';
-          res = myatoi(out);
-          free(out);
-          return res;
-        }
-      }
-    }
-    return -1;
-}
+//     if((start = strstr(input, str_start)) != NULL)
+//     {
+//       start += strlen(str_start);
+//       if((end = strstr(start, str_end)) != NULL)
+//       {
+//         char *out = malloc(end - start + 1);
+//         if(out != NULL)
+//         {
+//           memcpy(out, start, (end - start));
+//           out[end - start] = '\0';
+//           res = myatoi(out);
+//           free(out);
+//           return res;
+//         }
+//       }
+//     }
+//     return -1;
+// }
  
-  int myatoi(char * input) {
-          int res = 0 , i = 0;
-          while (input[i] != '\0') {
-                  if (input[i] >= '0' && input[i] <= '9')
-                          res = input[i] - '0' + res * 10;
-                  i++;
-          }
-          return res;
-  }
+//   int myatoi(char * input) {
+//           int res = 0 , i = 0;
+//           while (input[i] != '\0') {
+//                   if (input[i] >= '0' && input[i] <= '9')
+//                           res = input[i] - '0' + res * 10;
+//                   i++;
+//           }
+//           return res;
+//   }
 
-int get_operation(char *cmd)
-{
-    char str[][7] = { "INIT" , "GET" , "PUT", "DEL"};
-    int n;
+// int get_operation(char *cmd)
+// {
+//     char str[][7] = { "INQUIRY" , "FETCH" , "INSERT", "DELETE"};
+//     int n;
 
-    char fn_file[20];
-    int op;
-    if (!strncmp (str[0],cmd, 4)){
-        op = INIT;
+//     char fn_file[20];
+//     int op;
+//     if (!strncmp (str[0],cmd, 7)){
+//         op = INQUIRY;
 
-    }
-    else if(!strncmp (str[1],cmd, 3)) {
-        op = GET;
-           }
-    else if(!strncmp (str[2],cmd, 3)){
-        op = PUT;
+//     }
+//     else if(!strncmp (str[1],cmd, 5)) {
+//         op = FETCH;
+//            }
+//     else if(!strncmp (str[2],cmd, 6)) {
+//         op = INSERT;
 
-    }
-    else if(!strncmp (str[3],cmd, 3)){
-        op = DEL;
-    }
-    else{
-        op = INVALID;
+//     }
+//     else if(!strncmp (str[3],cmd, 6)) {
+//         op = DELETE;
+//     }
+//     else{
+//         op = INVALID;
         
-    }
-    return op;
-}
+//     }
+//     return op;
+// }
 
 
 
@@ -184,66 +186,66 @@ int main(int argc , char *argv[])
 
                     switch (cmd) {
 
-                        case INIT:
-                            printf("call initialize\n");
-                            if(fd >= 0)
-                                close(fd);
+                        // case INIT:
+                        //     printf("call initialize\n");
+                        //     if(fd >= 0)
+                        //         close(fd);
                         
-                           // printf("parse %s\n", client_message);
-                            char * filename = get_str(client_message, "<name>", "</name>");
-                            int length = get_int(client_message, "<length>", "</length>");
-                            int size = get_int(client_message, "<size>", "</size>");
+                        //    // printf("parse %s\n", client_message);
+                        //     char * filename = get_str(client_message, "<name>", "</name>");
+                        //     int length = get_int(client_message, "<length>", "</length>");
+                        //     int size = get_int(client_message, "<size>", "</size>");
 
-                            sprintf(server_message, "filename is %s length is %d, size is %d", 
-                                    filename, length, size);
+                        //     sprintf(server_message, "filename is %s length is %d, size is %d", 
+                        //             filename, length, size);
 
-                            fd = initialize(filename, length , size);
+                        //     fd = initialize(filename, length , size);
     
-                            free (filename);
-                            break;
-                        case GET:
-                            printf("call fetch\n");
-                            int slot;
-                            char * get_key = get_str(client_message, "<key>", "</key>");
-                            void * get_value = malloc(MAX_DATA_SIZE);
-                            int sz = sizeof(get_value);
+                        //     free (filename);
+                        //     break;
+                        // case GET:
+                        //     printf("call fetch\n");
+                        //     int slot;
+                        //     char * get_key = get_str(client_message, "<key>", "</key>");
+                        //     void * get_value = malloc(MAX_DATA_SIZE);
+                        //     int sz = sizeof(get_value);
 
-                            if((slot = fetch(get_key, get_value, &sz)) == -1)
-                                     sprintf(server_message, "404 not found");
-                            else {
-                             //   printf("%s is found at slot[%d]\n", get_key, slot);
-                              //  printf("value is %s", (char*)get_value);
-                                sprintf(server_message, "200 OK\n <value>%s</value>", (char *)get_value);
-                            }
+                        //     if((slot = fetch(get_key, get_value, &sz)) == -1)
+                        //              sprintf(server_message, "404 not found");
+                        //     else {
+                        //      //   printf("%s is found at slot[%d]\n", get_key, slot);
+                        //       //  printf("value is %s", (char*)get_value);
+                        //         sprintf(server_message, "200 OK\n <value>%s</value>", (char *)get_value);
+                        //     }
 
-                            free(get_key);
-                            free(get_value);
-                            break;
-                        case PUT:
-                            printf("call insert\n");
-                            char * put_key = get_str(client_message, "<key>", "</key>");
-                            char * put_value = get_str(client_message, "<value>", "</value>");
-                            int put_len = strlen(put_value);
+                        //     free(get_key);
+                        //     free(get_value);
+                        //     break;
+                        // case PUT:
+                        //     printf("call insert\n");
+                        //     char * put_key = get_str(client_message, "<key>", "</key>");
+                        //     char * put_value = get_str(client_message, "<value>", "</value>");
+                        //     int put_len = strlen(put_value);
                            
-                            if (insert(put_key, (void *)put_value, put_len) == -1)
-                                sprintf(server_message, "hash table is full");
-                            else
-                                sprintf(server_message, "201 OK");
+                        //     if (insert(put_key, (void *)put_value, put_len) == -1)
+                        //         sprintf(server_message, "hash table is full");
+                        //     else
+                        //         sprintf(server_message, "201 OK");
 
-                            free(put_key);
-                            free(put_value);
-                            break;
-                        case DEL:
-                            printf("call delete\n");
-                            char * del_key = get_str(client_message, "<key>", "</key>");
+                        //     free(put_key);
+                        //     free(put_value);
+                        //     break;
+                        // case DEL:
+                        //     printf("call delete\n");
+                        //     char * del_key = get_str(client_message, "<key>", "</key>");
 
-                            if(delete(del_key))
-                                sprintf(server_message, "404 not found");
-                            else
-                                sprintf(server_message, "delete successfully");
+                        //     if(delete(del_key))
+                        //         sprintf(server_message, "404 not found");
+                        //     else
+                        //         sprintf(server_message, "delete successfully");
 
-                            free(del_key);
-                            break;
+                        //     free(del_key);
+                        //     break;
                         default:
                             sprintf(server_message, "513 LUL WUT?");
                             break;
