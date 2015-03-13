@@ -6,6 +6,7 @@
 #include <unistd.h>    //write
 
 #include "md5.h"
+#include "base64.h"
 
 
 extern int initialize(char *file, int length, int size);
@@ -22,9 +23,9 @@ extern int fd;
 // #define DELETE 3
 // #define INVALID 99
 
-#define MAX_KEY_SIZE 100
-#define MAX_DATA_SIZE 1000
-#define FILLED 0xDEADD00D
+// #define MAX_KEY_SIZE 100
+// #define MAX_DATA_SIZE 1000
+// #define FILLED 0xDEADD00D
 
 // char * get_str(const char * input, 
 //     const char * str_start, const char * str_end)
@@ -113,7 +114,28 @@ extern int fd;
 //     return op;
 // }
 
+void parse (char * msg, char * msg_digest, char * block, size_t * size) {
+    int i, j, k;
+    *size = (size_t)msg[strlen(msg) - 1];
+    // printf("size=%d\n", *size);
+    i = 7; // size of "INQUIRY"
+    for (k = 0; k < MD_LEN; ++i, ++k) 
+        msg_digest[k] = msg[i];
+    ++i;
+    for (j = 0; j < *size; ++j, ++i)
+        block[j] = msg[i];
+    // block[j] = '\0';
+    // printf("before decode:%s\n", block);
+}
 
+int xor_fold(char * msg_digest) {
+    int xor_r = 0x0, i;
+    int * p = (int *)msg_digest;
+    for (i = 0; i < MD_LEN/4; ++i) 
+        xor_r ^= p[i];
+    // printf("xor result = %x\n", xor_r);
+    return xor_r;
+}
 
 int main(int argc , char *argv[])
 {
@@ -179,9 +201,9 @@ int main(int argc , char *argv[])
             while( (read_size = recv(client_sock , client_message , 2000 , 0)) > 0 )
             {
                 if(strlen(client_message)) {
-                   // printf("receive: %s\n", client_message);
+                    // printf("receive: %s\n", client_message);
                     int cmd = get_operation(client_message);
-                   // printf("cmd: %d\n", cmd);
+                    // printf("cmd: %d\n", cmd);
                     fflush(0);
 
                     switch (cmd) {
@@ -246,6 +268,20 @@ int main(int argc , char *argv[])
 
                         //     free(del_key);
                         //     break;
+                        case INSERT:
+                            puts("call insert");
+                            int slot, i;
+                            char md[100], blk[200], * o_blk;
+                            size_t len;
+                            parse(client_message, md, blk, &len);
+                            slot = xor_fold(md);
+
+                            // decode base64
+                            size_t d_size;
+                            o_blk = base64_decode(blk, len, &d_size);
+                            // printf("after decode: %s\n", o_blk);
+                            sprintf(server_message, "accepted");
+                            break; 
                         default:
                             sprintf(server_message, "513 LUL WUT?");
                             break;

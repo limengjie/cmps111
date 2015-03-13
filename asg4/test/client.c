@@ -108,18 +108,24 @@ void packet(char * block, char * msg) {
     char * output;
     size_t blk_sz;
     output = base64_encode(block, strlen(block), &blk_sz);
+    // printf("before send:blk:%s\n", output);
     // printf("base64 encode: %s\n", output); 
-    printf("block size = %d\n", blk_sz);
+    // printf("block size = %d\n", blk_sz);
+    
     // packet message
-    int i, j;
-    for (i = 0; i < 16; ++i)
-        msg[i] = msg_digest[i];
+    int i, j, k;
+    char command[] = "INSERT";
+    for (i = 0; i < 6; ++i)
+        msg[i] = command[i];
+    msg[i++] = ',';
+    for (k = 0; k < MD_LEN; ++k)
+        msg[i++] = msg_digest[k];
     msg[i++] = ',';
     for (j = 0; j < strlen(output); ++j)
         msg[i++] = output[j];
     msg[i++] = ',';
-    printf("block: %s\n", &msg[17]); 
-    char length = (char)strlen(output);
+    // printf("block: %s\n", &msg[17]); 
+    char length = (char)blk_sz;
     msg[i++] = length;
     msg[i] = '\0';
     // printf("length = %d\n", (int)msg[strlen(msg)-1]);
