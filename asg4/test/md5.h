@@ -401,6 +401,7 @@ char *inString;
 #define BLOCKS 500
 #define LEN 80
 #define MD_LEN 16
+#define MSG_LEN 139
 
 #define MAX_KEY_SIZE 100
 #define MAX_DATA_SIZE 1000

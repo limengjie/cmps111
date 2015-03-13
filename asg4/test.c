@@ -52,27 +52,29 @@ int main () {
 
 
    /*xor fold message digest */
-   char * str = "Stat rosa pristina nomine, nomina nuda tenemus";
-   /*unsigned char * msg_digest = MDString(str);*/
+   char * str = "Stat rosa pristina nomine, nomina nuda tenemus abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz";
+   unsigned char * msg_digest = MDString(str);
+   printf("msg_digest's len = %d\n", strlen(msg_digest));
+   printf("message digest: %x\n", msg_digest);
    /*for (i = 0; i < 16; ++i) {*/
       /*printf("%x ", msg_digest[i]);*/
    /*}*/
    /*printf("\n");*/
-   unsigned char xor_res[5] = {};  
+   /*unsigned char xor_res[5] = {};  */
    /*for (i = 0; i < 16/4; ++i)*/
 	   /*for (j = 0; j < 4; ++j)*/
 		   /*xor_res[j] = xor_res[j] ^ msg_digest[4*i + j];*/
    /*xor_res[4] = 0;*/
-   int xor_r = 0x0;
-   char msgdigest[8];
-   msgdigest[0] = 0x0;
-   msgdigest[1] = 0x0;
-   msgdigest[2] = 0x0;
-   msgdigest[3] = 0x0;
-   msgdigest[4] = 0x1;
-   msgdigest[5] = 0x1;
-   msgdigest[6] = 0x1;
-   msgdigest[7] = 0x1;
+   /*int xor_r = 0x0;*/
+   /*char msgdigest[8];*/
+   /*msgdigest[0] = 0x0;*/
+   /*msgdigest[1] = 0x0;*/
+   /*msgdigest[2] = 0x0;*/
+   /*msgdigest[3] = 0x0;*/
+   /*msgdigest[4] = 0x1;*/
+   /*msgdigest[5] = 0x1;*/
+   /*msgdigest[6] = 0x1;*/
+   /*msgdigest[7] = 0x1;*/
    /*int *p = (int *)msgdigest;*/
    /*for (i = 0; i < 2; ++i) {*/
 	   /*xor_r = xor_r ^ p[i];*/
@@ -85,36 +87,36 @@ int main () {
    /*printf("xor result = %x\n", (int *)xor_res);*/
 
    /*send and recv message*/
-   char message[1000];
+   /*char message[1000];*/
 
-   for (i = 0; i < 8; ++i)
-	   message[i] = msgdigest[i];
-   message[i++] = ',';
-   for (j = 0; j < strlen(output); ++j, ++i)
-	   message[i] = output[j];
-   /*printf("message = %s\n", &message[9]);*/
-   message[i++] = ',';
-   message[i++] = (char)strlen(output);
-   printf("output's len: %d\n", strlen(output));
-   printf("current i = %d\n", i);
-   message[i] = '\0';
+   /*for (i = 0; i < 8; ++i)*/
+	   /*message[i] = msgdigest[i];*/
+   /*message[i++] = ',';*/
+   /*for (j = 0; j < strlen(output); ++j, ++i)*/
+	   /*message[i] = output[j];*/
+   /*[>printf("message = %s\n", &message[9]);<]*/
+   /*message[i++] = ',';*/
+   /*message[i++] = (char)strlen(output);*/
+   /*printf("output's len: %d\n", strlen(output));*/
+   /*printf("current i = %d\n", i);*/
+   /*message[i] = '\0';*/
 
-   int a = (int)(message[strlen(output)+1+9]);
-   printf("a=%d\n", a);
+   /*int a = (int)(message[strlen(output)+1+9]);*/
+   /*printf("a=%d\n", a);*/
    
-   char recv_blk[100];
-   for (i = 0; i < a; ++i) 
-      recv_blk[i] = message[i+9];
-   recv_blk[i] = '\0';
-   printf("recv block is %s\n", recv_blk);
+   /*char recv_blk[100];*/
+   /*for (i = 0; i < a; ++i) */
+      /*recv_blk[i] = message[i+9];*/
+   /*recv_blk[i] = '\0';*/
+   /*printf("recv block is %s\n", recv_blk);*/
 
-   size_t de_size;
-   origin = base64_decode(recv_blk, a, &de_size);
-   printf("base64 decode: %s \n", origin);
-   /*free(msg_digest);*/
+   /*size_t de_size;*/
+   /*origin = base64_decode(recv_blk, a, &de_size);*/
+   /*printf("base64 decode: %s \n", origin);*/
+   /*[>free(msg_digest);<]*/
    
    
-   free(output);
-   free(origin);
+   /*free(output);*/
+   /*free(origin);*/
    return 0;
 }

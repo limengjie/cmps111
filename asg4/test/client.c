@@ -3,6 +3,7 @@
 #include <sys/socket.h>    //socket
 #include <arpa/inet.h> //inet_addr
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "md5.h"
 #include "base64.h"
@@ -95,6 +96,47 @@
 //     return blks;
 // }
 
+// void ingest(char * file, char * recipe) {
+//     puts("call ingest");
+//     FILE * fp;
+//     fp = fopen(file, "r");
+//     if (fp == NULL) {
+//         fprintf(stderr, "no such file!\n");
+//         exit(1);
+//     }
+//     // creat a file-recipe 
+   
+//     // char rfilename[20];
+//     // sprintf(rfilename, "recipe-%s", file);
+//     int fileDes = open(recipe, O_RDWR | O_CREAT | O_TRUNC );
+//     if (fileDes == -1) {
+//         fprintf(stderr, "fail to create a file!\n");
+//         exit(2);
+//     }
+//     fchmod(fileDes, 0666);
+
+//     int c, i, j, blks;
+//     char blocks[BLOCKS][LEN];
+//     // char * output;
+//     // size_t blk_sz;
+//     unsigned char * msg_digest;
+//     while ((c = fgetc(fp)) != EOF && j < BLOCKS) {
+//         blocks[j][i++] = c;
+//         if (i == LEN - 1) {
+//             blocks[j][i] = '\0';
+//             i = 0;
+//             // output = base64_encode(blocks[j], strlen(blocks[j]), &blk_sz);
+//             msg_digest = MDString(blocks[j]);
+//             lseek(fileDes, 0, SEEK_CUR);
+//             write(fileDes, msg_digest, strlen(msg_digest));
+//             memset(msg_digest, 0, strlen(msg_digest));
+//             printf("%d line: %d\n", j, strlen(msg_digest));
+//             ++j;
+//         }
+//     }
+//     blks = j;
+// }
+
 void packet(char * block, char * msg) {
     // encode md5
     unsigned char * msg_digest = MDString(block);
@@ -108,10 +150,12 @@ void packet(char * block, char * msg) {
     char * output;
     size_t blk_sz;
     output = base64_encode(block, strlen(block), &blk_sz);
+    // lseek(filed, 0, SEEK_CUR);
+    // write(filed, output, blk_sz);
     // printf("before send:blk:%s\n", output);
     // printf("base64 encode: %s\n", output); 
     // printf("block size = %d\n", blk_sz);
-    
+
     // packet message
     int i, j, k;
     char command[] = "INSERT";
@@ -179,7 +223,19 @@ int main(int argc , char *argv[])
                 exit(1);
             }
 
+
             // read and divde a file into serveral blocks
+            // // creat a file-recipe at the mean time
+            // int c, i, j, blks;
+            // char blocks[BLOCKS][LEN];
+            // char rfilename[20];
+            // sprintf(rfilename, "recipe-%s", filename);
+            // int fileDes = open(rfilename, O_RDWR | O_CREAT | O_TRUNC );
+            // if (fileDes == -1) {
+            //     fprintf(stderr, "fail to create a file!\n");
+            //     exit(2);
+            // }
+            // fchmod(fileDes, 0666);
             int c, i, j, blks;
             char blocks[BLOCKS][LEN];
             while ((c = fgetc(fp)) != EOF && j < BLOCKS) {
@@ -203,7 +259,13 @@ int main(int argc , char *argv[])
                     puts("Send failed");
                     return 1;
                 }
-            }        
+            }      
+
+            // call ingest
+            char * recipe = "recipe.txt";
+            ingest(filename, recipe);
+
+            close(fp);  
         } //end if
          
 
