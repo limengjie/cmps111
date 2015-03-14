@@ -90,6 +90,7 @@ unsigned char *base64_decode(const char *data,
 
 void base64_cleanup() {
     free(decoding_table);
+    decoding_table = NULL;
 }
 
 // int main ( ) {

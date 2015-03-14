@@ -7,25 +7,90 @@
 
 #include "md5.h"
 #include "base64.h"
+#include "func.h"
 
 
-extern int initialize(char *file, int length, int size);
-extern int insert(char *key, void *value, int length);
-extern int fetch (char *key, void *value, int *length);
-extern int delete(char *key);
-extern int probe(char *key);
+// extern int initialize(char *file, int length, int size);
+// extern int insert(char *key, void *value, int length);
+// extern int fetch (char *key, void *value, int *length);
+// extern int delete(char *key);
+// extern int probe(char *key);
+
 
 extern int fd;
 
+int setup_server() {
+    // int socket_desc , client_sock , c , read_size;
+    int socket_desc;
+    // struct sockaddr_in server , client;
+    struct sockaddr_in server;
+    // char client_message[2000];
+    // char server_message[2000];
+     
+    //Create socket
+    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+    if (socket_desc == -1)
+    {
+        printf("Could not create socket");
+    }
+    puts("Socket created");
+     
+    //Prepare the sockaddr_in structure
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons( 10732 );
+     
+    //Bind
+    if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
+    {
+        //print the error message
+        perror("bind failed. Error");
+        return 1;
+    }
+    puts("bind done");
+     
+    //Listen
+    listen(socket_desc , 3);
+     
+    //Accept and incoming connection
+    puts("Waiting for incoming connections...");
+
+    return socket_desc;
+}
+
+int get_pos(char * msg, char delimiter, int times) {
+    if (times <= 0)
+        return -1;
+    int i, num = 0;
+    for (i = 0; num < times && i < MSG_LEN; ++i)
+        if (msg[i] == delimiter)
+            ++num;
+    return i;
+}
+
+size_t n2h_len(int * intp) {
+    int ilen = ntohl(*intp);
+    size_t slen = (size_t)ilen;
+    return slen; 
+}
 
 void parse (char * msg, unsigned char * msg_digest, char * block, size_t * size) {
     int i, j, k;
-    *size = (size_t)msg[strlen(msg) - 1];
+    // *size = (size_t)msg[strlen(msg) - 1];
+    // get block length
+    i = get_pos(msg, ',', 3);
+    *size = n2h_len((int *)&msg[i]);
     // printf("size=%d\n", *size);
-    i = 7; // size of "INQUIRY"
-    for (k = 0; k < MD_LEN; ++i, ++k) 
-        msg_digest[k] = msg[i];
-    ++i;
+    // get message digest
+    i = get_pos(msg, ',', 1);
+    // printf("md5's pos = %d\n", i);
+    // printf("size of size_t = %d\n", sizeof(size_t));
+    // the res should be 7
+    for (j = 0; j < MD_LEN; ++i, ++j) 
+        msg_digest[j] = msg[i];
+    // get base 64 block    
+    i = get_pos(msg, ',', 2);
+    // printf("b64's pos = %d\n", i); // i should be 24?
     for (j = 0; j < *size; ++j, ++i)
         block[j] = msg[i];
     // block[j] = '\0';
@@ -57,41 +122,53 @@ int xor_fold(char * msg_digest) {
 
 int main(int argc , char *argv[])
 {
-    int socket_desc , client_sock , c , read_size;
-    struct sockaddr_in server , client;
-    char client_message[2000];
+    // // int socket_desc , client_sock , c , read_size;
+    // int socket_desc, c, read_size;
+    // // struct sockaddr_in server , client;
+    // struct sockaddr_in server;
+    // // char client_message[2000];
+    // // char server_message[2000];
+     
+    // //Create socket
+    // socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+    // if (socket_desc == -1)
+    // {
+    //     printf("Could not create socket");
+    // }
+    // puts("Socket created");
+     
+    // //Prepare the sockaddr_in structure
+    // server.sin_family = AF_INET;
+    // server.sin_addr.s_addr = INADDR_ANY;
+    // server.sin_port = htons( 10732 );
+     
+    // //Bind
+    // if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
+    // {
+    //     //print the error message
+    //     perror("bind failed. Error");
+    //     return 1;
+    // }
+    // puts("bind done");
+     
+    // //Listen
+    // listen(socket_desc , 3);
+     
+    // //Accept and incoming connection
+    // puts("Waiting for incoming connections...");
+    // c = sizeof(struct sockaddr_in);
+    
+    int client_sock, socket_desc, read_size, c;
+    char client_message[137];
+
+
     char server_message[2000];
-     
-    //Create socket
-    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-    if (socket_desc == -1)
-    {
-        printf("Could not create socket");
-    }
-    puts("Socket created");
-     
-    //Prepare the sockaddr_in structure
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons( 10732 );
-     
-    //Bind
-    if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
-    {
-        //print the error message
-        perror("bind failed. Error");
-        return 1;
-    }
-    puts("bind done");
-     
-    //Listen
-    listen(socket_desc , 3);
-     
-    //Accept and incoming connection
-    puts("Waiting for incoming connections...");
+    struct sockaddr_in client;
+
+    socket_desc = setup_server();
+    
     c = sizeof(struct sockaddr_in);
-    
-    
+
     fd = -1;
     while (1) {
         //accept connection from an incoming client
@@ -111,72 +188,90 @@ int main(int argc , char *argv[])
             
             
             close(socket_desc);
-            
-            
+
+            int slot, i;
+
+            char *b64_blk; 
+            char *de_blk;
+            unsigned char *md;
+
+
+            size_t len, blk_sz;
+
             //Receive a message from client
             
-            memset(client_message, 0, 2000);
-            while( (read_size = recv(client_sock , client_message , MSG_LEN, 0)) > 0 )
+            memset(client_message, 0, 137);
+            while( (read_size = recv(client_sock , client_message , 137, 0)) > 0 )
             {
-                if(strlen(client_message)) {
-                    // printf("receive: %s\n", client_message);
-                    int cmd = get_operation(client_message);
-                    // printf("cmd: %d\n", cmd);
-                    fflush(0);
+                
+                // printf("receive: %s\n", client_message);
+                int cmd = get_operation(client_message);
+                // printf("cmd: %d\n", cmd);
+                //fflush(0);
 
-                    switch (cmd) {
-                        // // case INQUIRY:
-                        // case FETCH:
-                        //     puts("call fetch");
-                        //     //get md5
-                        //     char md5[100];
-                        //     int i;
-                        //     for (i = 0; i < MD_LEN; ++i)
-                        //         md5[i] = client_message[i+6];
-                        //     int slot;
-                        //     slot = xor_fold(md5);
-                        //     // search hash table
-                        //     if (!found(slot, md5))
-                        //         sprintf(server_message, "NOT-FOUND");
-                        //     else {
-                        //         // get_block
-                        //         char * block;
-                        //         // encode base64
-                        //         char * base64;
-                        //         size_t blk_sz;
-                        //         base64 = base64_encode(block, strlen(block), &blk_sz);
-                        //         packet_back(base64, blk_sz, server_message);
-                        //     }
-                        //     break;
-                        case INSERT:
-                            puts("call insert");
-                            int slot, i;
-                            char blk[400], * o_blk;
-                            unsigned char md[100];
-                            size_t len;
-                            parse(client_message, md, blk, &len);
-                            slot = xor_fold(md);
-                            puts("server md5:");
-                            for (i = 0; i < 16; ++i)
-                                printf("%x",md[i]);
-                            puts(" ");
-                            // decode base64
-                            size_t d_size;
-                            o_blk = base64_decode(blk, len, &d_size);
-                            printf("after decode: %s\n", o_blk);
-                            sprintf(server_message, "accepted");
-                            fflush(0);
-                            break; 
-                        default:
-                            sprintf(server_message, "513 LUL WUT?");
-                            puts("unidentified cmd\n");
-                            fflush(0);
-                            break;
-                    }
+                switch (cmd) {
+                    // // case INQUIRY:
+                    // case FETCH:
+                    //     puts("call fetch");
+                    //     //get md5
+                    //     for (i = 0; i < MD_LEN; ++i)
+                    //         md[i] = client_message[i+6];
+                    //     slot = xor_fold(md5);
+                    //     // search hash table
+                    //     if (!found(slot, md))
+                    //         sprintf(server_message, "NOT-FOUND");
+                    //     else {
+                    //         // get_block
+                    //         char * block;
+                    //         // encode base64
+                    //         char * base64;
+                    //         size_t blk_sz;
+                    //         base64 = base64_encode(block, strlen(block), &blk_sz);
+                    //         packet_back(base64, blk_sz, server_message);
+                    //     }
+                    //     break;
+                    case INSERT:
+                        puts("call insert");
+
+
+                        //print md5 string
+                        int k = INSERT_LEN + 1;
+                        printf("server md5:");
+                        for (i = 0; i < MD5_DIGEST; ++i)
+                            printf("%x",client_message[k+i]);
+                        printf("\n");
+
+
+                        k += MD5_DIGEST + 1;
+                        int b64_start = k;
+
+                        int b64_len = 0;
+                        //base64 data 
+                        while (client_message[k++] != ',') 
+                            b64_len++;
+                        
+                        
+                        // decode base64
+                        size_t de_size;
+                        de_blk = base64_decode(client_message + b64_start, b64_len, &de_size);
+
+
+                        //print the data block
+                        printf("after decode: %s\n", de_blk);
+
+                        base64_cleanup();
+                        free(de_blk);
+
+                        break; 
+                    default:
+                        sprintf(server_message, "513 LUL WUT?");
+                        puts("unidentified cmd\n");
+                        fflush(0);
+                        break;
+                }
                 //Send the message back to client
-                write(client_sock , server_message , strlen(server_message));
-                memset(server_message, 0, 2000);
-                } // endIf
+                //write(client_sock , server_message , strlen(server_message));
+                //memset(server_message, 0, 2000);
             }
             if(read_size == 0)
             {

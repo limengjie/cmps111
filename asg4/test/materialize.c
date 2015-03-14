@@ -8,6 +8,7 @@
 
 #include "md5.h"
 #include "base64.h"
+#include "func.h"
 
 void packet(unsigned char * md, char * msg) {
 	int i, k;

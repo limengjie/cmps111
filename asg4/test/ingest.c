@@ -8,6 +8,9 @@
 
 #include "md5.h"
 #include "base64.h"
+#include "func.h"
+
+
 
 int connect_server() {
 	// create socket and connect to server
@@ -41,12 +44,18 @@ int connect_server() {
     return sock;
 }
 
+// modify the length for transmission
+int h2n_len(size_t size) {
+    int len = htonl((uint32_t)size);
+    // printf("from client: len = %d\n", len);
+    return len;
+}
+
 size_t encode(char * block, unsigned char * md, char * b64, int filed) {
 	// encode md5
-	char * md5;
-    md5 = MDString(block);
-    strcpy(md, md5);
-    // md[16] = '\n';
+	char md5[16];
+    MDString(block, md5);
+    
 	lseek(filed, 0, SEEK_CUR);
 	write(filed, md, MD_LEN);
     // puts("encode md5");
@@ -59,41 +68,49 @@ size_t encode(char * block, unsigned char * md, char * b64, int filed) {
     // endoe base64
     size_t blk_sz;
     char * base64;
-    base64 = base64_encode(block, strlen(block), &blk_sz);
+    base64 = base64_encode(block, LEN, &blk_sz);
     strcpy(b64, base64);
     // printf("block size = %d\n", blk_sz);
+
+    // modify length for transmission
+    // int length = h2n_len(blk_sz);
+    
     return blk_sz;
 }
 
-void packet(unsigned char * md, char * b64, size_t len, char * msg) {
+void packet(unsigned char * md, char * b64, size_t b64_size, char *msg) {
     // packet message
-    int i, j, k;
-    char command[] = "INSERT";
-    for (i = 0; i < strlen(command); ++i)
-        msg[i] = command[i];
-    msg[i++] = ',';
-    for (k = 0; k < MD_LEN; ++k)
-        msg[i++] = md[k];
-    msg[i++] = ',';
-    for (j = 0; j < strlen(b64); ++j)
-        msg[i++] = b64[j];
-    msg[i++] = ',';
-    // printf("block: %s\n", &msg[17]); 
-    char *length = (char*)&len;
-    //printf("length become: %d\n", length);
+    int i, j;
+    
+    int k;
 
-    printf("block size: ");
-    for(j=0; j<sizeof(size_t); j++)
-    {
-    	printf("%c", length[j]);
-    	msg[i++] = length[j++];
-	}
+    //command part of the message
+	k = strlen("INSERT");
+    memcpy(msg, "INSERT", k);
 
-    msg[i++] = length;
-    msg[i] = '\0';
-    // printf("length = %d\n", (int)msg[strlen(msg)-1]);
-    printf("message len= %d\n", i);
+	//comma
+    msg[k++] = ',';
 
+    //md5 string
+    memcpy(msg+k, md, MD5_DIGEST);
+    k += MD5_DIGEST;  
+
+    //comma
+    msg[k++] = ',';
+
+    //base64 part
+    memcpy(msg+k, b64, b64_size);
+    k += b64_size;
+
+    //comma
+    msg[k++] = ',';
+
+    // base64 data size
+    int length = h2n_len(b64_size);
+    memcpy(msg+k, (char*)&length, sizeof(int));
+
+ 
+    return ;
 }
 
 int main(int argc , char *argv[])
@@ -103,37 +120,9 @@ int main(int argc , char *argv[])
 		exit(1);
 	}
 
+	int n;
 	int sock = connect_server();
-	char message[1000] , server_reply[2000];
-	// // create socket and connect to server
- //    int sock;
- //    struct sockaddr_in server;
- //    char message[1000] , server_reply[2000];
- //    // char b64_blk[400];
- //    // unsigned char msg_digest[100];
-     
- //    //Create socket
- //    sock = socket(AF_INET , SOCK_STREAM , 0);
- //    if (sock == -1)
- //    {
- //        printf("Could not create socket");
- //    }
- //    puts("Socket created");
-     
- //    server.sin_addr.s_addr = inet_addr("127.0.0.1");
- //    server.sin_family = AF_INET;
- //    server.sin_port = htons( 10732 );
- 
- //    //Connect to remote server
- //    if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
- //    {
- //        perror("connect failed. Error");
- //        return 1;
- //    }
-     
- //    puts("Connected\n");
-    
-    int n;
+	char server_reply[2000];
    
     // open a file
     char * filename = argv[1];
@@ -154,60 +143,90 @@ int main(int argc , char *argv[])
     }
     fchmod(fileDes, 0666);
  	
-    //read the file to blocks
-    int c, i, j, blks;
-    char blocks[BLOCKS][LEN];
-    while ((c = fgetc(fp)) != EOF && j < BLOCKS) {
-        blocks[j][i++] = c;
-        if (i == LEN - 1) {
-            blocks[j++][i] = '\0';
-            i = 0;
-        }
-    }
-    blks = j;
+    //read file to block
+    int c, i, j = 0, blks, bytes;
+    // char blocks[BLOCKS][LEN];
+    char block[LEN+1];
+    // while ((c = fgetc(fp)) != EOF && j < BLOCKS) {
+    //     blocks[j][i++] = c;
+    //     if (i == LEN - 1) {
+    //         blocks[j++][i] = '\0';
+    //         i = 0;
+    //     }
+    // }
+    // while ((bytes = fread(blocks[j++], 1, LEN, fp)) > 0)
+    // 	;
+    // blks = j;
     // for (i = 0; i < blks; ++i) {
     //     printf("%d\n %s\n", i, blocks[i]);
     // }  
-    for (i = 3; i < 4; ++i) {
-    	printf("%d loop:\n", i);
-    	// memset(msg_digest, 0, 100);
-    	// memset(b64_blk, 0, 400);
-    	char b64_blk[400];
-   		unsigned char msg_digest[100];
-    	size_t length;
-    	length  = encode(blocks[i], msg_digest, b64_blk, fileDes);
-    	printf("len = %d\n", length);
-        memset(message, 0, 1000);
-        puts("b64:");
-        printf("%s\n", b64_blk);  
+    // for (i = 0; i < blks; ++i) {
+    memset(block, 0, LEN+1);
+    while ((bytes = fread(block, 1, LEN, fp)) > 0) {
+
+		block[bytes] = '\0';    
+    	printf("Block: \n %s\n------------------\n", block);
+
+
+    	char *b64_blk;
+    	size_t b64_blk_len;
+
+    	//generate base64 data of the block
+    	b64_blk = base64_encode(block, LEN, &b64_blk_len);
+
+		//md5 string of the block
+		char msg_digest[16];
+    	MDString(block, msg_digest);
+
+    	//print md5 string
         int j;  
         printf("md:\n" );
 	    for (j = 0; j < 16; ++j) {
-	        printf("%x", msg_digest[j]);
+	        printf("%02x", msg_digest[j]);
 	    }
 	    printf("\n");
-        packet(msg_digest, b64_blk, length, message);
-        printf("message: %s\n", message);
-        if( write(sock , message , MSG_LEN) < 0)
+
+	    // add message digest to file recipe
+	    lseek(fileDes, 0, SEEK_CUR);
+	    write(fileDes, msg_digest, 16);
+
+	    // pack command and 3 parameters 
+	    int msg_sz;
+		msg_sz = INSERT_LEN + MD5_DIGEST + SIZE_OF_INT + b64_blk_len + COMMA;
+
+		printf("message size: %d\n", msg_sz);
+
+
+
+	    char * message = malloc(msg_sz);
+        packet(msg_digest, b64_blk, b64_blk_len, message);
+
+
+
+        if( write(sock , message , msg_sz) < 0)
         {
             puts("Send failed");
             return 1;
         }
-    }      
+
+
+        memset(block, 0, LEN+1);
+
+    }   // end while   
 
     // close(fp);  
                
          
-    //Receive a reply from the server
-    if( (n=read(sock , server_reply , 2000)) < 0)
-    {
-        puts("recv failed");
-        // break;
-    }
+    // //Receive a reply from the server
+    // if( (n=read(sock , server_reply , 2000)) < 0)
+    // {
+    //     puts("recv failed");
+    //     // break;
+    // }
      
-    puts("Server reply :");
-    server_reply[n] = '\0';
-    puts(server_reply);
+    // puts("Server reply :");
+    // server_reply[n] = '\0';
+    // puts(server_reply);
      
     close(sock);
     return 0;
