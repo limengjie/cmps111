@@ -5,19 +5,26 @@
 #define INVALID 99
 
 #define BLOCKS 500
-#define LEN 80
+#define BLK_LEN 80
 #define MD_LEN 16
 #define MSG_LEN 139
 
 #define INSERT_LEN strlen("INSERT")
-#define MD5_DIGEST 16
+#define FETCT_LEN strlen("FETCH")
+#define FOUND_LEN strlen("FOUND")
+#define MD5_LEN 16
 #define SIZE_OF_INT sizeof(int)
-#define COMMA 3
+#define COMMA 1
 
-#define MAX_KEY_SIZE 100
-#define MAX_DATA_SIZE 1000
-#define FILLED 0xDEADD00D
+#define ENTRIES 100
+// #define MAX_KEY_SIZE 100
+// #define MAX_DATA_SIZE 1000
+// #define FILLED 0xDEADD00D
 
+
+
+
+// parse message
 int get_operation(char *cmd)
 {
     char str[][7] = { "INQUIRY" , "FETCH" , "INSERT", "DELETE"};
@@ -67,3 +74,29 @@ char * get_str(const char * input,
   }
   return NULL;
 }
+
+int get_pos(char * msg, char delimiter, int times) {
+    if (times <= 0)
+        return -1;
+    int i, num = 0;
+    for (i = 0; num < times && i < MSG_LEN; ++i)
+        if (msg[i] == delimiter)
+            ++num;
+    return i;
+}
+
+
+// modify the length for transmission
+int h2n_len(size_t size) {
+    int len = htonl((uint32_t)size);
+    // printf("from client: len = %d\n", len);
+    return len;
+}
+
+size_t n2h_len(int * intp) {
+    int ilen = ntohl(*intp);
+    size_t slen = (size_t)ilen;
+    return slen; 
+}
+
+

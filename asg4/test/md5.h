@@ -317,7 +317,7 @@ static long TEST_BYTES = (long)TEST_BLOCK_SIZE * (long)TEST_BLOCKS;
 
 void MDString (inString, md5_str)
 char *inString;
-char *md5_str;
+unsigned char *md5_str;
 {
   MD5_CTX mdContext;
 

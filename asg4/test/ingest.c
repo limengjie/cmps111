@@ -44,43 +44,38 @@ int connect_server() {
     return sock;
 }
 
-// modify the length for transmission
-int h2n_len(size_t size) {
-    int len = htonl((uint32_t)size);
-    // printf("from client: len = %d\n", len);
-    return len;
-}
 
-size_t encode(char * block, unsigned char * md, char * b64, int filed) {
-	// encode md5
-	char md5[16];
-    MDString(block, md5);
+
+// size_t encode(char * block, unsigned char * md, char * b64, int filed) {
+// 	// encode md5
+// 	unsigned char md5[16];
+//     MDString(block, md5);
     
-	lseek(filed, 0, SEEK_CUR);
-	write(filed, md, MD_LEN);
-    // puts("encode md5");
-    // int i;
-    // for (i = 0; i < 16; ++i) {
-    //     printf("%x", md[i]);
-    // }
-    // printf("\n");
+// 	lseek(filed, 0, SEEK_CUR);
+// 	write(filed, md, MD_LEN);
+//     // puts("encode md5");
+//     // int i;
+//     // for (i = 0; i < 16; ++i) {
+//     //     printf("%x", md[i]);
+//     // }
+//     // printf("\n");
 
-    // endoe base64
-    size_t blk_sz;
-    char * base64;
-    base64 = base64_encode(block, LEN, &blk_sz);
-    strcpy(b64, base64);
-    // printf("block size = %d\n", blk_sz);
+//     // endoe base64
+//     size_t blk_sz;
+//     char * base64;
+//     base64 = base64_encode(block, LEN, &blk_sz);
+//     strcpy(b64, base64);
+//     // printf("block size = %d\n", blk_sz);
 
-    // modify length for transmission
-    // int length = h2n_len(blk_sz);
+//     // modify length for transmission
+//     // int length = h2n_len(blk_sz);
     
-    return blk_sz;
-}
+//     return blk_sz;
+// }
 
 void packet(unsigned char * md, char * b64, size_t b64_size, char *msg) {
     // packet message
-    int i, j;
+    // int i, j;
     
     int k;
 
@@ -92,20 +87,20 @@ void packet(unsigned char * md, char * b64, size_t b64_size, char *msg) {
     msg[k++] = ',';
 
     //md5 string
-    memcpy(msg+k, md, MD5_DIGEST);
-    k += MD5_DIGEST;  
+    memcpy(msg+k, md, MD5_LEN);
+    k += MD5_LEN;  
 
     //comma
     msg[k++] = ',';
 
-    //base64 part
+    //base64
     memcpy(msg+k, b64, b64_size);
     k += b64_size;
 
     //comma
     msg[k++] = ',';
 
-    // base64 data size
+    // base64 length
     int length = h2n_len(b64_size);
     memcpy(msg+k, (char*)&length, sizeof(int));
 
@@ -120,10 +115,12 @@ int main(int argc , char *argv[])
 		exit(1);
 	}
 
-	int n;
+
 	int sock = connect_server();
 	char server_reply[2000];
-   
+ 
+
+
     // open a file
     char * filename = argv[1];
     // printf("filename is %s\n", filename);
@@ -134,6 +131,7 @@ int main(int argc , char *argv[])
         exit(-1);
     }
 
+
     // create a file-recipe
     char * rfilename = argv[2];
     int fileDes = open(rfilename, O_RDWR | O_CREAT | O_TRUNC );
@@ -142,27 +140,16 @@ int main(int argc , char *argv[])
         exit(-1);
     }
     fchmod(fileDes, 0666);
+
+
+
  	
     //read file to block
-    int c, i, j = 0, blks, bytes;
-    // char blocks[BLOCKS][LEN];
-    char block[LEN+1];
-    // while ((c = fgetc(fp)) != EOF && j < BLOCKS) {
-    //     blocks[j][i++] = c;
-    //     if (i == LEN - 1) {
-    //         blocks[j++][i] = '\0';
-    //         i = 0;
-    //     }
-    // }
-    // while ((bytes = fread(blocks[j++], 1, LEN, fp)) > 0)
-    // 	;
-    // blks = j;
-    // for (i = 0; i < blks; ++i) {
-    //     printf("%d\n %s\n", i, blocks[i]);
-    // }  
-    // for (i = 0; i < blks; ++i) {
-    memset(block, 0, LEN+1);
-    while ((bytes = fread(block, 1, LEN, fp)) > 0) {
+    int i, j, bytes;
+    char block[BLK_LEN+1];
+    
+    memset(block, 0, BLK_LEN+1);
+    while ((bytes = fread(block, 1, BLK_LEN, fp)) > 0) {
 
 		block[bytes] = '\0';    
     	printf("Block: \n %s\n------------------\n", block);
@@ -172,10 +159,10 @@ int main(int argc , char *argv[])
     	size_t b64_blk_len;
 
     	//generate base64 data of the block
-    	b64_blk = base64_encode(block, LEN, &b64_blk_len);
+    	b64_blk = base64_encode(block, BLK_LEN, &b64_blk_len);
 
-		//md5 string of the block
-		char msg_digest[16];
+		//get message digest 
+		unsigned char msg_digest[16];
     	MDString(block, msg_digest);
 
     	//print md5 string
@@ -192,17 +179,15 @@ int main(int argc , char *argv[])
 
 	    // pack command and 3 parameters 
 	    int msg_sz;
-		msg_sz = INSERT_LEN + MD5_DIGEST + SIZE_OF_INT + b64_blk_len + COMMA;
+		msg_sz = INSERT_LEN + MD5_LEN + SIZE_OF_INT + b64_blk_len + COMMA*3;
 
 		printf("message size: %d\n", msg_sz);
-
-
 
 	    char * message = malloc(msg_sz);
         packet(msg_digest, b64_blk, b64_blk_len, message);
 
 
-
+        // send message
         if( write(sock , message , msg_sz) < 0)
         {
             puts("Send failed");
@@ -210,12 +195,13 @@ int main(int argc , char *argv[])
         }
 
 
-        memset(block, 0, LEN+1);
+        memset(block, 0, BLK_LEN+1);
 
     }   // end while   
 
     // close(fp);  
                
+    // int n;
          
     // //Receive a reply from the server
     // if( (n=read(sock , server_reply , 2000)) < 0)

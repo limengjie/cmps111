@@ -1,0 +1,1 @@
+CH1:Q:Multiprogramming is the rapid switching of the CPU between multiple proc- esses in memory.Input spooling is the technique of reading in jobs, for example, from cards, onto the disk, so that when the currently executing processes are finished, there will be work

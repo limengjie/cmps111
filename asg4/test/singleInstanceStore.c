@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 //inlcude md5 functions header
-#include "md5.h"
+// #include "md5.h"
 
 #define MAX_KEY_SIZE 16
 #define MAX_DATA_SIZE 1000
@@ -25,8 +25,8 @@
 //define a structure for storing your hashEntry
 typedef struct {
 	int occupied;
-	char* key;
-	int data;
+	unsigned char key[16];
+	off_t data;
 	} HashEntry;
 	
 
@@ -51,11 +51,12 @@ void reserveFileSpace(int fileDes){
 	//store blank entries of type HashEntry
 	//Blank HashEntry
 	HashEntry h;
-	h.occupied = 0x00000000;
-	h.key = malloc(MAX_KEY_SIZE);
-	h.data = 0x00000000;
-	//update hashEntry size
 	hashEntrySize = sizeof(h);
+	memset(&h, 0, hashEntrySize);
+	// h.occupied = 0x00000000;
+	// // h.key = malloc(MAX_KEY_SIZE);
+	// h.data = 0x00000000;
+	// //update hashEntry size
 	//total number of entries = hashTableSize
 	for(entry = 0; entry < hashTableSize; entry++){
 		//write values
@@ -63,21 +64,21 @@ void reserveFileSpace(int fileDes){
 	}
 	
 	//return file descrtor to beginning
-	lseek(fileDes,0,SEEK_SET);
+	lseek(fileDes, 0, SEEK_SET);
 }
 		
 
 
 //initialize function
 //initialize append log also
-int initialize(char *file, int length, int size){
+int initialize(char *file, int size) {
 	//try opening the file with read write permission and create it if not found
 	// the flags specify the permissions
 	// truncate file if already exists to empty it
 	//also set proper read, write modes
-	int fileDes = open(file, O_RDWR | O_CREAT ); 
+	fd = open(file, O_RDWR | O_CREAT ); 
 	//set modes for file
-	fchmod(fileDes,0666);
+	fchmod(fd,0666);
 	
 	//apend log initialize
 	app = open("append_log", O_RDWR | O_CREAT  );
@@ -85,72 +86,70 @@ int initialize(char *file, int length, int size){
 	
 	//update HashEntry
 	HashEntry h;
-	h.occupied = 0x00000000;
-	h.key = malloc(MAX_KEY_SIZE);
-	h.data = 0x00000000;
-	//update hashEntry size
+	memset(&h, 0, hashEntrySize);
+	//update hashEntry sizec
 	hashEntrySize = sizeof(h);
 	
 	//initialize hashTableSize
 	hashTableSize = size;
 	//update current size by reading file
 	currentSize = (lseek(app,0,SEEK_END)/hashEntrySize);
-	lseek(app,0,SEEK_SET);
+	lseek(app,0,SEEK_SET); 
 	
 	//initialize file contents to all empty reserved space
 	if(currentSize == 0)
-		reserveFileSpace(fileDes);
+		reserveFileSpace(fd);
 	
 	
 	//return file descriptor
 	//fd is already set to -1 if an error occurs
-	return fileDes;
+	return fd;
 }
 
-//internal MD5 digest function
-unsigned char* getDigest(char* key){
-	//get length of key
-	int l = strlen(key);	
+// //internal MD5 digest function
+// unsigned char* getDigest(char* key){
+// 	//get length of key
+// 	int l = strlen(key);	
 	
-	//calculate md5 digest
-	MD5_CTX mdContext;
-	MD5Init (&mdContext);
-	MD5Update (&mdContext, key, l);
-	MD5Final (&mdContext);
+// 	//calculate md5 digest
+// 	MD5_CTX mdContext;
+// 	MD5Init (&mdContext);
+// 	MD5Update (&mdContext, key, l);
+// 	MD5Final (&mdContext);
 
-	unsigned char* result = malloc(16*sizeof(unsigned char));
-	//copy digest
-	int i;
-	for(i=0;i<16;i++)
-		result[i] = mdContext.digest[i];
+// 	unsigned char* result = malloc(16*sizeof(unsigned char));
+// 	//copy digest
+// 	int i;
+// 	for(i=0;i<16;i++)
+// 		result[i] = mdContext.digest[i];
 	
-	return result;
+// 	return result;
 	
-}
+// }
 
-//internal hash function
-//MODIFIED to use MD5
-int hash(char* key){
+// //internal hash function
+// //MODIFIED to use MD5
+// int hash(char* key){
 	
-	//get message digest
-	unsigned char* digest = getDigest(key);
+// 	//get message digest
+// 	unsigned char* digest = getDigest(key);
 
-	//calculate key by xoring all values
-	int hashValue = (int)digest[0];
+// 	//calculate key by xoring all values
+// 	int hashValue = (int)digest[0];
 
-	int i;
-	for(i=1;i<16;i++)
-		hashValue = hashValue^((int)digest[i]);
+// 	int i;
+// 	for(i=1;i<16;i++)
+// 		hashValue = hashValue^((int)digest[i]);
 	
-	return hashValue;
-}
+// 	return hashValue;
+// }
 
 
 
 //intenal file index function
 //takes a hashValue and returns its lseek index for SEEK_SET
-int fileIndex(int hashValue){
-	return hashValue*hashEntrySize;
+unsigned long fileIndex(unsigned hashValue){
+	return (unsigned long)hashValue*hashEntrySize;
 }
 
 //internal function to see if hash slot is filled
@@ -169,32 +168,36 @@ int isFilled(){
 }
 
 //insert a value, use linear probe to find space
-int insert(char *key, void *value, int length){
+long insert(unsigned slot, char *key, void *value, int length){
 	//if filled return -1
 	if(currentSize == hashTableSize)
 		return -1;
 	
+	puts("from insert");
 	//increase size
 	currentSize++;
 	
-	//get hashValue slot to check
-	int slot = hash(key);
+	// //get hashValue slot to check
+	// int slot = hash(key);
 	
 	//form new HashEntry
 	HashEntry h;
-	h.occupied = FILLED;
-	h.key = malloc(MAX_KEY_SIZE);
-	h.data = lseek(app,0,SEEK_END);
+	memset(&h, 0, hashEntrySize);
+	h.occupied = FILLED; 
+	h.data = lseek(app, 0, SEEK_END);
 
-	strcpy(h.key,(const char*)getDigest(key));
+	// append block to app log
+	strncpy(h.key, key, MAX_KEY_SIZE);
 	char* data = malloc(MAX_DATA_SIZE);
 	memset(data,0,MAX_DATA_SIZE);
-	strcpy(data,(char *)value);
+	// printf("val: %s\n", (char*)value);
+	strncpy(data,(char *)value, strlen((char*)value));
 	write(app,data,MAX_DATA_SIZE);
 	
 	//get index
 	int index = fileIndex(slot);
 	
+
 	//search for empty slot to write
 	lseek(fd,index, SEEK_SET);
 	//linear probe if filled
@@ -205,79 +208,152 @@ int insert(char *key, void *value, int length){
 	}
 	
 	//after getting empty location, put in value
-	write(fd,&h,sizeof(h));
+	write(fd, &h, hashEntrySize);
 	
+
 	//return slot location
-	return slot;
+	return (long)slot;
 }
 
-//fetch a value from the hash table
-int fetch (char *key, void *value, int *length){
-	//if empty return -1
-	if(currentSize == 0)
-		return -1;
-	
-	//getdigest
-	key = getDigest(key);
-	
-	//get hashValue slot to check
-	int slot = hash(key);
-		
-	//form new HashEntry
-	HashEntry h;
-	h.key = malloc(MAX_KEY_SIZE);
-	h.data = 0;
-	
-	//get index
-	int index = fileIndex(slot);
-	
-	//search for filled slot to read
-	lseek(fd,index, SEEK_SET);
-	
-	//flag if found
-	int found = 0;
-	
-	//linear probe if filled
-	while(isFilled()){
-		read(fd,&h,hashEntrySize);
-		
-		//compare keys if correct data
-		if( strcmp(h.key,key) == 0){
-			found = 1;
-			break;
-		}
-		slot = (slot+1)%hashTableSize;
-		index = fileIndex(slot);
+// check if the block is in the hash table or not
+int inquiry(unsigned slot, char * key) {
+		//if empty return -1
+		if(currentSize == 0)
+			return 0;
+
+		//form new HashEntry
+		HashEntry h;
+		memset(&h, 0, hashEntrySize);
+
+
+		//get index
+		unsigned long index = fileIndex(slot);
+		//search for filled slot to read
 		lseek(fd,index, SEEK_SET);
-	}
+			
+		//flag if found
+		int found = 0;
 
-	if(found == 1){
-		//read data from append log
-		lseek(app,h.data,SEEK_SET);
-		value = malloc(MAX_DATA_SIZE);
-		read(app,value,MAX_DATA_SIZE);
-		
-		
-		//printf("slot to fetch: %d\n",slot);
-		//return slot location
-		return slot;
-	}
+		//linear probe if filled
+		while(isFilled()){
+			read(fd,&h,hashEntrySize);
 
-		//if not found
-		return -1;
+			
+			//compare keys if correct data
+			if( memcmp(h.key, key, MAX_KEY_SIZE) == 0){
+				found = 1;
+				puts("block is found");
+				break;
+			}
+			slot = (slot+1)%hashTableSize;
+
+			index = fileIndex(slot);
+			lseek(fd,index, SEEK_SET);
+		}
+
+		if (found)
+			printf("block is existed\n");
+
+		return found;
 }
 
-//probe function, uses fetch internally
-int probe(char *key){
-	//create dummy value pointer
-	void* value = malloc(MAX_DATA_SIZE);
-	int sz = sizeof(value);
+// //fetch a value from the hash table
+// int fetch (char *key, void *value, int *length){
+// 	//if empty return -1
+// 	if(currentSize == 0)
+// 		return -1;
+	
+// 	//getdigest
+// 	key = getDigest(key);
+	
+// 	//get hashValue slot to check
+// 	int slot = hash(key);
+		
+// 	//form new HashEntry
+// 	HashEntry h;
+// 	h.key = malloc(MAX_KEY_SIZE);
+// 	h.data = 0;
+	
+// 	//get index
+// 	int index = fileIndex(slot);
+	
+// 	//search for filled slot to read
+// 	lseek(fd,index, SEEK_SET);
+	
+// 	//flag if found
+// 	int found = 0;
+	
+// 	//linear probe if filled
+// 	while(isFilled()){
+// 		read(fd,&h,hashEntrySize);
+		
+// 		//compare keys if correct data
+// 		if( strcmp(h.key,key) == 0){
+// 			found = 1;
+// 			break;
+// 		}
+// 		slot = (slot+1)%hashTableSize;
+// 		index = fileIndex(slot);
+// 		lseek(fd,index, SEEK_SET);
+// 	}
 
-	//use fetch to probe
-	int ret = fetch(key,value,&sz);
-	free(value);
-	return ret;
-}
+// 	if(found == 1){
+// 		//read data from append log
+// 		lseek(app,h.data,SEEK_SET);
+// 		value = malloc(MAX_DATA_SIZE);
+// 		read(app,value,MAX_DATA_SIZE);
+		
+		
+// 		//printf("slot to fetch: %d\n",slot);
+// 		//return slot location
+// 		return slot;
+// 	}
+
+// 		//if not found
+// 		return -1;
+// }
+
+// //probe function, uses fetch internally
+// int probe(char *key){
+// 	//create dummy value pointer
+// 	void* value = malloc(MAX_DATA_SIZE);
+// 	int sz = sizeof(value);
+
+// 	//use fetch to probe
+// 	int ret = fetch(key,value,&sz);
+// 	free(value);
+// 	return ret;
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //delete function
 /* not used here */

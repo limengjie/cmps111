@@ -8,6 +8,7 @@
 #include "md5.h"
 #include "base64.h"
 #include "func.h"
+// #include "singleInstanceStore.c"
 
 
 // extern int initialize(char *file, int length, int size);
@@ -16,7 +17,9 @@
 // extern int delete(char *key);
 // extern int probe(char *key);
 
-
+extern int initialize(char *file, int size);
+extern long insert(int slot, char *key, void *value, int length);
+extern int inquiry(unsigned slot, char * key);
 extern int fd;
 
 int setup_server() {
@@ -58,21 +61,8 @@ int setup_server() {
     return socket_desc;
 }
 
-int get_pos(char * msg, char delimiter, int times) {
-    if (times <= 0)
-        return -1;
-    int i, num = 0;
-    for (i = 0; num < times && i < MSG_LEN; ++i)
-        if (msg[i] == delimiter)
-            ++num;
-    return i;
-}
 
-size_t n2h_len(int * intp) {
-    int ilen = ntohl(*intp);
-    size_t slen = (size_t)ilen;
-    return slen; 
-}
+
 
 void parse (char * msg, unsigned char * msg_digest, char * block, size_t * size) {
     int i, j, k;
@@ -97,8 +87,8 @@ void parse (char * msg, unsigned char * msg_digest, char * block, size_t * size)
     // printf("before decode:%s\n", block);
 }
 
-int xor_fold(char * msg_digest) {
-    int xor_r = 0x0, i;
+unsigned xor_fold(unsigned char * msg_digest) {
+    unsigned xor_r = 0x0, i;
     int * p = (int *)msg_digest;
     for (i = 0; i < MD_LEN/4; ++i) 
         xor_r ^= p[i];
@@ -122,41 +112,7 @@ int xor_fold(char * msg_digest) {
 
 int main(int argc , char *argv[])
 {
-    // // int socket_desc , client_sock , c , read_size;
-    // int socket_desc, c, read_size;
-    // // struct sockaddr_in server , client;
-    // struct sockaddr_in server;
-    // // char client_message[2000];
-    // // char server_message[2000];
-     
-    // //Create socket
-    // socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-    // if (socket_desc == -1)
-    // {
-    //     printf("Could not create socket");
-    // }
-    // puts("Socket created");
-     
-    // //Prepare the sockaddr_in structure
-    // server.sin_family = AF_INET;
-    // server.sin_addr.s_addr = INADDR_ANY;
-    // server.sin_port = htons( 10732 );
-     
-    // //Bind
-    // if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
-    // {
-    //     //print the error message
-    //     perror("bind failed. Error");
-    //     return 1;
-    // }
-    // puts("bind done");
-     
-    // //Listen
-    // listen(socket_desc , 3);
-     
-    // //Accept and incoming connection
-    // puts("Waiting for incoming connections...");
-    // c = sizeof(struct sockaddr_in);
+   
     
     int client_sock, socket_desc, read_size, c;
     char client_message[137];
@@ -189,11 +145,17 @@ int main(int argc , char *argv[])
             
             close(socket_desc);
 
-            int slot, i;
+            // initialize the hash table and append log
+            char * hashTable = "hashTable";
+            // printf("hash table has %u entries\n", (unsigned)HT_ENTRIES);
+            initialize(hashTable, ENTRIES);
+
+            unsigned slot;
+            int i;
 
             char *b64_blk; 
             char *de_blk;
-            unsigned char *md;
+            unsigned char * md_ptr;
 
 
             size_t len, blk_sz;
@@ -219,7 +181,7 @@ int main(int argc , char *argv[])
                     //     slot = xor_fold(md5);
                     //     // search hash table
                     //     if (!found(slot, md))
-                    //         sprintf(server_message, "NOT-FOUND");
+                    //         sprintf(server_message, "NOT-F");
                     //     else {
                     //         // get_block
                     //         char * block;
@@ -232,24 +194,28 @@ int main(int argc , char *argv[])
                     //     break;
                     case INSERT:
                         puts("call insert");
-
-
                         //print md5 string
                         int k = INSERT_LEN + 1;
                         printf("server md5:");
-                        for (i = 0; i < MD5_DIGEST; ++i)
-                            printf("%x",client_message[k+i]);
+                        for (i = 0; i < MD5_LEN; ++i)
+                            printf("%x", (unsigned char)client_message[k+i]);
                         printf("\n");
 
+                        // find the slot in hash table
+                        md_ptr  = (unsigned char *)&client_message[k];
+                        slot = xor_fold(md_ptr);
+                        slot %= ENTRIES;
+                        printf("slot = %u\n", slot);
 
-                        k += MD5_DIGEST + 1;
+
+                        // base 64 block
+                        k += MD5_LEN + 1;
                         int b64_start = k;
-
                         int b64_len = 0;
-                        //base64 data 
+
+                        //get length of base 64 block
                         while (client_message[k++] != ',') 
-                            b64_len++;
-                        
+                            b64_len++;                       
                         
                         // decode base64
                         size_t de_size;
@@ -259,8 +225,19 @@ int main(int argc , char *argv[])
                         //print the data block
                         printf("after decode: %s\n", de_blk);
 
-                        base64_cleanup();
-                        free(de_blk);
+                        long act_slot; 
+                        // insert the entry if it is not found in hash table
+                        if (!inquiry(slot, md_ptr)) {
+                            // insert the entry to hash table
+                            if ((act_slot = insert(slot, md_ptr, (void*)de_blk, de_size)) == -1) {
+                                perror("hash table is full");
+                                exit(-1);
+                            }
+                            printf("insert to slot %ld actually\n", act_slot);
+                        }
+
+                        // base64_cleanup();
+                        // free(de_blk);
 
                         break; 
                     default:
