@@ -17,6 +17,8 @@
 //inlcude md5 functions header
 // #include "md5.h"
 
+ // #include "func.h"
+
 #define MAX_KEY_SIZE 16
 #define MAX_DATA_SIZE 1000
 #define FILLED 0xDEADD00D
@@ -225,23 +227,23 @@ int inquiry(unsigned slot, char * key) {
 		HashEntry h;
 		memset(&h, 0, hashEntrySize);
 
-
 		//get index
 		unsigned long index = fileIndex(slot);
 		//search for filled slot to read
 		lseek(fd,index, SEEK_SET);
 			
 		//flag if found
-		int found = 0;
+		int found = -1;
 
 		//linear probe if filled
 		while(isFilled()){
 			read(fd,&h,hashEntrySize);
 
+		puts("from inquiry");
 			
 			//compare keys if correct data
 			if( memcmp(h.key, key, MAX_KEY_SIZE) == 0){
-				found = 1;
+				found = slot;
 				puts("block is found");
 				break;
 			}
@@ -251,57 +253,21 @@ int inquiry(unsigned slot, char * key) {
 			lseek(fd,index, SEEK_SET);
 		}
 
-		if (found)
+		if (found != -1)
 			printf("block is existed\n");
 
 		return found;
 }
 
 // //fetch a value from the hash table
-// int fetch (char *key, void *value, int *length){
-// 	//if empty return -1
-// 	if(currentSize == 0)
-// 		return -1;
-	
-// 	//getdigest
-// 	key = getDigest(key);
-	
-// 	//get hashValue slot to check
-// 	int slot = hash(key);
-		
-// 	//form new HashEntry
-// 	HashEntry h;
-// 	h.key = malloc(MAX_KEY_SIZE);
-// 	h.data = 0;
-	
-// 	//get index
-// 	int index = fileIndex(slot);
-	
-// 	//search for filled slot to read
-// 	lseek(fd,index, SEEK_SET);
-	
-// 	//flag if found
-// 	int found = 0;
-	
-// 	//linear probe if filled
-// 	while(isFilled()){
-// 		read(fd,&h,hashEntrySize);
-		
-// 		//compare keys if correct data
-// 		if( strcmp(h.key,key) == 0){
-// 			found = 1;
-// 			break;
-// 		}
-// 		slot = (slot+1)%hashTableSize;
-// 		index = fileIndex(slot);
-// 		lseek(fd,index, SEEK_SET);
-// 	}
+// int fetch (unsigned slot, char *key, void *value, int *length){
+// 	int pos = inquiry(slot, key);
 
-// 	if(found == 1){
+// 	if(found) {
 // 		//read data from append log
 // 		lseek(app,h.data,SEEK_SET);
-// 		value = malloc(MAX_DATA_SIZE);
-// 		read(app,value,MAX_DATA_SIZE);
+// 		value = malloc(BLK_LEN);
+// 		read(app,value, BLK_LEN);
 		
 		
 // 		//printf("slot to fetch: %d\n",slot);

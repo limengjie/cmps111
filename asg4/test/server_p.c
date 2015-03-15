@@ -20,6 +20,7 @@
 extern int initialize(char *file, int size);
 extern long insert(int slot, char *key, void *value, int length);
 extern int inquiry(unsigned slot, char * key);
+extern int fetch (unsigned slot, char *key, void *value, int *length);
 extern int fd;
 
 int setup_server() {
@@ -93,6 +94,7 @@ unsigned xor_fold(unsigned char * msg_digest) {
     for (i = 0; i < MD_LEN/4; ++i) 
         xor_r ^= p[i];
     // printf("xor result = %x\n", xor_r);
+    xor_r %= ENTRIES;
     return xor_r;
 }
 
@@ -151,14 +153,15 @@ int main(int argc , char *argv[])
             initialize(hashTable, ENTRIES);
 
             unsigned slot;
-            int i;
+            int i, k;
 
-            char *b64_blk; 
+            char *b64_blk, * block; 
             char *de_blk;
             unsigned char * md_ptr;
 
 
-            size_t len, blk_sz;
+            size_t len, blk_sz, de_size, b64_sz;
+
 
             //Receive a message from client
             
@@ -172,30 +175,30 @@ int main(int argc , char *argv[])
                 //fflush(0);
 
                 switch (cmd) {
-                    // // case INQUIRY:
                     // case FETCH:
                     //     puts("call fetch");
                     //     //get md5
+                    //     k = FETCH_LEN + 1;
+                    //     md_ptr  = (unsigned char *)&client_message[k];
                     //     for (i = 0; i < MD_LEN; ++i)
                     //         md[i] = client_message[i+6];
-                    //     slot = xor_fold(md5);
+                    //     slot = xor_fold(md_ptr);
                     //     // search hash table
-                    //     if (!found(slot, md))
-                    //         sprintf(server_message, "NOT-F");
+                    //     if (!inquiry(slot, md_ptr))
+                    //         sprintf(server_message, "NOT-FOUND");
                     //     else {
                     //         // get_block
-                    //         char * block;
+                    //          int ht_slot = fetch (slot, md_ptr, block, &blk_sz);
+
                     //         // encode base64
-                    //         char * base64;
-                    //         size_t blk_sz;
-                    //         base64 = base64_encode(block, strlen(block), &blk_sz);
-                    //         packet_back(base64, blk_sz, server_message);
+                    //         b64_blk = base64_encode(block, strlen(block), &blk_sz);
+                    //         packet_back(b64_blk, blk_sz, server_message);
                     //     }
                     //     break;
                     case INSERT:
                         puts("call insert");
                         //print md5 string
-                        int k = INSERT_LEN + 1;
+                        k = INSERT_LEN + 1;
                         printf("server md5:");
                         for (i = 0; i < MD5_LEN; ++i)
                             printf("%x", (unsigned char)client_message[k+i]);
@@ -204,22 +207,22 @@ int main(int argc , char *argv[])
                         // find the slot in hash table
                         md_ptr  = (unsigned char *)&client_message[k];
                         slot = xor_fold(md_ptr);
-                        slot %= ENTRIES;
+                        // slot %= ENTRIES;
                         printf("slot = %u\n", slot);
 
 
                         // base 64 block
                         k += MD5_LEN + 1;
                         int b64_start = k;
-                        int b64_len = 0;
+                        b64_sz = 0;
 
                         //get length of base 64 block
                         while (client_message[k++] != ',') 
-                            b64_len++;                       
+                            b64_sz++;                       
                         
                         // decode base64
-                        size_t de_size;
-                        de_blk = base64_decode(client_message + b64_start, b64_len, &de_size);
+                        
+                        de_blk = base64_decode(client_message + b64_start, b64_sz, &de_size);
 
 
                         //print the data block
@@ -227,7 +230,7 @@ int main(int argc , char *argv[])
 
                         long act_slot; 
                         // insert the entry if it is not found in hash table
-                        if (!inquiry(slot, md_ptr)) {
+                        if (inquiry(slot, md_ptr) == -1) {
                             // insert the entry to hash table
                             if ((act_slot = insert(slot, md_ptr, (void*)de_blk, de_size)) == -1) {
                                 perror("hash table is full");
