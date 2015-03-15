@@ -46,33 +46,6 @@ int connect_server() {
 
 
 
-// size_t encode(char * block, unsigned char * md, char * b64, int filed) {
-// 	// encode md5
-// 	unsigned char md5[16];
-//     MDString(block, md5);
-    
-// 	lseek(filed, 0, SEEK_CUR);
-// 	write(filed, md, MD_LEN);
-//     // puts("encode md5");
-//     // int i;
-//     // for (i = 0; i < 16; ++i) {
-//     //     printf("%x", md[i]);
-//     // }
-//     // printf("\n");
-
-//     // endoe base64
-//     size_t blk_sz;
-//     char * base64;
-//     base64 = base64_encode(block, LEN, &blk_sz);
-//     strcpy(b64, base64);
-//     // printf("block size = %d\n", blk_sz);
-
-//     // modify length for transmission
-//     // int length = h2n_len(blk_sz);
-    
-//     return blk_sz;
-// }
-
 void packet(unsigned char * md, char * b64, size_t b64_size, char *msg) {
     // packet message
     // int i, j;
@@ -80,7 +53,7 @@ void packet(unsigned char * md, char * b64, size_t b64_size, char *msg) {
     int k;
 
     //command part of the message
-	k = strlen("INSERT");
+	k = INSERT_LEN;
     memcpy(msg, "INSERT", k);
 
 	//comma
@@ -120,6 +93,13 @@ int main(int argc , char *argv[])
 	char server_reply[2000];
  
 
+    char type = 'i';
+    if( write(sock , &type, 1) < 0)
+    {
+            puts("Send failed");
+            return 1;
+    }
+
 
     // open a file
     char * filename = argv[1];
@@ -152,7 +132,7 @@ int main(int argc , char *argv[])
     while ((bytes = fread(block, 1, BLK_LEN, fp)) > 0) {
 
 		block[bytes] = '\0';    
-    	printf("Block: \n %s\n------------------\n", block);
+    	printf("Block: \n %s\n", block);
 
 
     	char *b64_blk;
@@ -161,17 +141,19 @@ int main(int argc , char *argv[])
     	//generate base64 data of the block
     	b64_blk = base64_encode(block, BLK_LEN, &b64_blk_len);
 
+        // printf("b64 len = %d\n", b64_blk_len);
+
 		//get message digest 
 		unsigned char msg_digest[16];
     	MDString(block, msg_digest);
 
     	//print md5 string
         int j;  
-        printf("md:\n" );
+        printf("message digest:\n" );
 	    for (j = 0; j < 16; ++j) {
 	        printf("%02x", msg_digest[j]);
 	    }
-	    printf("\n");
+	    printf("\n--------------------------------\n");
 
 	    // add message digest to file recipe
 	    lseek(fileDes, 0, SEEK_CUR);

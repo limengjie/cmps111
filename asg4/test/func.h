@@ -10,7 +10,7 @@
 #define MSG_LEN 139
 
 #define INSERT_LEN strlen("INSERT")
-#define FETCT_LEN strlen("FETCH")
+#define FETCH_LEN strlen("FETCH")
 #define FOUND_LEN strlen("FOUND")
 #define MD5_LEN 16
 #define SIZE_OF_INT sizeof(int)

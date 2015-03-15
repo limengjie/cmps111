@@ -98,29 +98,42 @@ unsigned xor_fold(unsigned char * msg_digest) {
     return xor_r;
 }
 
-// void packet_back(char * b64, size_t size, char * msg) {
-//     char str[] = "FOUND"；
-//     int i, j;
-//     for (i = 0; i < strlen(str); ++i)
-//         msg[i] = str[i];
-//     msg[i++] = ',';
-//     for (j = 0; j < size; ++j)
-//         msg[i] = b64[j];
-//     msg[i++] = ',';
-//     char length = (char)size;
-//     msg[i++] = length;
-//     msg[i] = '\0';
-// }
+void packet_back(char * b64, size_t size, char * msg) {
+    int k;
+
+    // command
+    k = FOUND_LEN;
+    memcpy(msg, "FOUND", k);
+
+    //comma
+    msg[k++] = ',';
+
+    //b64
+    memcpy(msg+k, b64, size);
+    k += size;
+    printf("size = %d\n", size);
+
+    //comma
+    msg[k++] = ',';
+
+    int length = h2n_len(size);
+    memcpy(msg+k, (char*)&length, sizeof(int));
+
+    k += sizeof(int);
+
+    printf("total msg sz is %d\n", k);
+
+}
 
 int main(int argc , char *argv[])
 {
    
     
     int client_sock, socket_desc, read_size, c;
-    char client_message[137];
 
 
-    char server_message[2000];
+
+    char server_message[119];
     struct sockaddr_in client;
 
     socket_desc = setup_server();
@@ -143,9 +156,36 @@ int main(int argc , char *argv[])
         
         
         if (pid == 0) {//child
-            
+
+
             
             close(socket_desc);
+
+
+            char *client_message;
+            int message_len;
+            char type;
+
+
+            while(recv(client_sock, &type, 1, 0)>0)
+            {
+                if(type == 'i')
+                    message_len = 137;
+                else if(type == 'm')
+                    message_len = 22;
+                else
+                    {
+                        printf("can not identify the type of client.\n");
+                        exit(-1);
+                    }
+
+                break;
+            }
+
+
+
+
+            client_message = (char *)malloc(message_len);
 
             // initialize the hash table and append log
             char * hashTable = "hashTable";
@@ -155,18 +195,18 @@ int main(int argc , char *argv[])
             unsigned slot;
             int i, k;
 
-            char *b64_blk, * block; 
+            char *b64_blk, block[BLK_LEN]; 
             char *de_blk;
             unsigned char * md_ptr;
 
 
-            size_t len, blk_sz, de_size, b64_sz;
+            size_t blk_sz, de_size, b64_sz;
 
 
             //Receive a message from client
             
-            memset(client_message, 0, 137);
-            while( (read_size = recv(client_sock , client_message , 137, 0)) > 0 )
+            memset(client_message, 0, message_len);
+            while( (read_size = recv(client_sock , client_message , message_len, 0)) > 0 )
             {
                 
                 // printf("receive: %s\n", client_message);
@@ -175,26 +215,36 @@ int main(int argc , char *argv[])
                 //fflush(0);
 
                 switch (cmd) {
-                    // case FETCH:
-                    //     puts("call fetch");
-                    //     //get md5
-                    //     k = FETCH_LEN + 1;
-                    //     md_ptr  = (unsigned char *)&client_message[k];
-                    //     for (i = 0; i < MD_LEN; ++i)
-                    //         md[i] = client_message[i+6];
-                    //     slot = xor_fold(md_ptr);
-                    //     // search hash table
-                    //     if (!inquiry(slot, md_ptr))
-                    //         sprintf(server_message, "NOT-FOUND");
-                    //     else {
-                    //         // get_block
-                    //          int ht_slot = fetch (slot, md_ptr, block, &blk_sz);
+                    case FETCH:
+                        puts("call fetch");
+                        //get md5
+                        k = FETCH_LEN + 1;
+                        md_ptr  = (unsigned char *)&client_message[k];
+                        for (i = 0; i < 16; ++i)
+                            printf("%x", md_ptr[i]);
+                        puts("\nrecv md5");
+                        // for (i = 0; i < MD_LEN; ++i)
+                        //     md[i] = client_message[i+6];
+                        slot = xor_fold(md_ptr);
+                        printf("got slot %u\n", slot);
+                        // search hash table
+                        if (inquiry(slot, md_ptr) == -1) {
+                            sprintf(server_message, "NOT-FOUND");
+                        }
+                        else { // if blk is found, encode and send it back 
+                            // get_block
+                             int ht_slot = fetch (slot, md_ptr, (void*)block, &blk_sz);
 
-                    //         // encode base64
-                    //         b64_blk = base64_encode(block, strlen(block), &blk_sz);
-                    //         packet_back(b64_blk, blk_sz, server_message);
-                    //     }
-                    //     break;
+                            // encode base64
+                            b64_blk = base64_encode(block, BLK_LEN, &blk_sz);
+
+
+                            // pack the message to send
+                            packet_back(b64_blk, blk_sz, server_message);
+                        } // end else
+
+                        // free(block);
+                        break;
                     case INSERT:
                         puts("call insert");
                         //print md5 string
@@ -239,8 +289,10 @@ int main(int argc , char *argv[])
                             printf("insert to slot %ld actually\n", act_slot);
                         }
 
-                        // base64_cleanup();
-                        // free(de_blk);
+                        sprintf(server_message, "accepted");
+
+                        base64_cleanup();
+                        free(de_blk);
 
                         break; 
                     default:
@@ -250,8 +302,8 @@ int main(int argc , char *argv[])
                         break;
                 }
                 //Send the message back to client
-                //write(client_sock , server_message , strlen(server_message));
-                //memset(server_message, 0, 2000);
+                write(client_sock , server_message , 119);
+                memset(server_message, 0, 119);
             }
             if(read_size == 0)
             {
@@ -262,6 +314,7 @@ int main(int argc , char *argv[])
             {
                 perror("recv failed");
             }
+            free(client_message);
             exit(0);
 
         }

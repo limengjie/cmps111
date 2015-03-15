@@ -21,10 +21,10 @@ void packet(unsigned char * md, char * msg) {
     msg[k++] = ',';
 
 	//md5 string
-    memcpy(msg+k, md, MD5_DIGEST);
-    k += MD5_DIGEST;    
+    memcpy(msg+k, md, MD5_LEN);
+    k += MD5_LEN;    
    
-    printf("actual message sz = %d\n", i);
+    // printf("actual message sz = %d\n", i);
 }
 
 
@@ -41,6 +41,37 @@ size_t parse(char * msg, char * b64) {
 	return len;
 }
 
+int connect_server() {
+	// create socket and connect to server
+    int sock;
+    struct sockaddr_in server;
+    char message[1000] , server_reply[2000];
+    // char b64_blk[400];
+    // unsigned char msg_digest[100];
+     
+    //Create socket
+    sock = socket(AF_INET , SOCK_STREAM , 0);
+    if (sock == -1)
+    {
+        printf("Could not create socket");
+    }
+    puts("Socket created");
+     
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_family = AF_INET;
+    server.sin_port = htons( 10732 );
+ 
+    //Connect to remote server
+    if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
+    {
+        perror("connect failed. Error");
+        return 1;
+    }
+     
+    puts("Connected\n");
+
+    return sock;
+}
 
 // size_t decode(char * b64, size_t size, char * block) {
 // 	// decode base64
@@ -62,6 +93,15 @@ int main(int argc , char *argv[])
 	int sock = connect_server();
    
     
+
+    char type = 'm';
+    if( write(sock , &type, 1) < 0)
+    {
+            puts("Send failed");
+            return 1;
+    }
+
+
     // int n;
    
     // open a file
@@ -83,17 +123,17 @@ int main(int argc , char *argv[])
     }
     fchmod(fileDes, 0666);
  	
+	
+	unsigned char msg_digest[16];
    
-
     //read file to block
     int bytes;
     memset(msg_digest, 0, MD_LEN);
 
     while ((bytes = fread(msg_digest, 1, MD_LEN, fp)) > 0) {
     	
-    	//md5 string of the block
-		unsigned char msg_digest[16];
-    	MDString(block, msg_digest);
+    	// //md5 string of the block
+    	// MDString(block, msg_digest);
 
     	//print md5 string
         int i;  
@@ -123,9 +163,9 @@ int main(int argc , char *argv[])
         memset(msg_digest, 0, MD_LEN);
 
 
-		char * b64_blk; 
+		// char * b64_blk; 
         char * de_blk;
-	    size_t blk_sz, b64_sz;
+	    size_t de_sz, b64_sz;
 	    int n;
 
 	    //Receive a reply from the server
@@ -137,7 +177,7 @@ int main(int argc , char *argv[])
 	    }
 
 
-	    if (strncmp(server_reply, "FOUND", 5)
+	    if (strncmp(server_reply, "FOUND", 5))
 	    {
 	    	printf("no such block!\n");
 	    	break;
@@ -153,14 +193,18 @@ int main(int argc , char *argv[])
             while (server_reply[k++] != ',') 
             	b64_sz++;
 
-	    	blk_sz = decode(b64_blk, b64_sz, de_blk);
+            // decode the block
+	    	de_blk = base64_decode(server_reply+b64_start, b64_sz, &de_sz);
+	    	printf("block is %s size is %u\n", de_blk, de_sz);
+
+	    	// store the block in local file
 	  		lseek(fileDes, 0, SEEK_CUR);
-	  		write(fileDes, blk, blk_sz);
+	  		write(fileDes, de_blk, de_sz);
 
 	    } // end else
 
 	    
-
+        break; // test 1 loop///////////////////////
 
     } // end while
 

@@ -1,0 +1,1 @@
+CH1:Q:Multiprogramming is the rapid switching of the CPU between multiple proc- 

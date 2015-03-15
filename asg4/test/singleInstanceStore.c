@@ -22,6 +22,7 @@
 #define MAX_KEY_SIZE 16
 #define MAX_DATA_SIZE 1000
 #define FILLED 0xDEADD00D
+#define BLK_LEN 80
 
 
 //define a structure for storing your hashEntry
@@ -221,7 +222,9 @@ long insert(unsigned slot, char *key, void *value, int length){
 int inquiry(unsigned slot, char * key) {
 		//if empty return -1
 		if(currentSize == 0)
-			return 0;
+			return -1;
+		
+		// puts("from inquiry");
 
 		//form new HashEntry
 		HashEntry h;
@@ -239,12 +242,10 @@ int inquiry(unsigned slot, char * key) {
 		while(isFilled()){
 			read(fd,&h,hashEntrySize);
 
-		puts("from inquiry");
 			
 			//compare keys if correct data
 			if( memcmp(h.key, key, MAX_KEY_SIZE) == 0){
 				found = slot;
-				puts("block is found");
 				break;
 			}
 			slot = (slot+1)%hashTableSize;
@@ -255,29 +256,34 @@ int inquiry(unsigned slot, char * key) {
 
 		if (found != -1)
 			printf("block is existed\n");
+		else
+			puts("not found");
 
 		return found;
 }
 
-// //fetch a value from the hash table
-// int fetch (unsigned slot, char *key, void *value, int *length){
-// 	int pos = inquiry(slot, key);
+//fetch a value from the hash table
+int fetch (unsigned slot, char *key, void *value, int *length){
+	int pos = inquiry(slot, key);
 
-// 	if(found) {
-// 		//read data from append log
-// 		lseek(app,h.data,SEEK_SET);
-// 		value = malloc(BLK_LEN);
-// 		read(app,value, BLK_LEN);
+	if(pos) {
+		//read data from append log
+		//get index
+		unsigned long index = fileIndex(pos);
+		//search for filled slot to read
+		lseek(fd,index, SEEK_SET);
+		read(app, value, BLK_LEN);
 		
+		// printf("slot: %d  block: %s \n", pos, (char *)value);
 		
-// 		//printf("slot to fetch: %d\n",slot);
-// 		//return slot location
-// 		return slot;
-// 	}
+		//printf("slot to fetch: %d\n",slot);
+		//return slot location
+		return slot;
+	}
 
-// 		//if not found
-// 		return -1;
-// }
+		//if not found
+		return -1;
+}
 
 // //probe function, uses fetch internally
 // int probe(char *key){
