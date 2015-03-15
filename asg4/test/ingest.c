@@ -183,18 +183,18 @@ int main(int argc , char *argv[])
 
     // close(fp);  
                
-    // int n;
+    int n;
          
-    // //Receive a reply from the server
-    // if( (n=read(sock , server_reply , 2000)) < 0)
-    // {
-    //     puts("recv failed");
-    //     // break;
-    // }
+    //Receive a reply from the server
+    if( (n = read(sock , server_reply , 119)) < 0)
+    {
+        puts("recv failed");
+        // break;
+    }
      
-    // puts("Server reply :");
-    // server_reply[n] = '\0';
-    // puts(server_reply);
+    puts("Server reply :");
+    server_reply[n] = '\0';
+    puts(server_reply);
      
     close(sock);
     return 0;

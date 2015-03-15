@@ -11,6 +11,7 @@
 
 #define INSERT_LEN strlen("INSERT")
 #define FETCH_LEN strlen("FETCH")
+#define INQUIRY_LEN strlen("INQUIRY")
 #define FOUND_LEN strlen("FOUND")
 #define MD5_LEN 16
 #define SIZE_OF_INT sizeof(int)

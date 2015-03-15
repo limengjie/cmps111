@@ -125,6 +125,8 @@ void packet_back(char * b64, size_t size, char * msg) {
 
 }
 
+
+
 int main(int argc , char *argv[])
 {
    
@@ -215,6 +217,27 @@ int main(int argc , char *argv[])
                 //fflush(0);
 
                 switch (cmd) {
+                    case INQUIRY:
+                        puts("call inquiry");
+                         //print md5 string
+                        k = INSERT_LEN + 1;
+                        printf("server md5:");
+                        for (i = 0; i < MD5_LEN; ++i)
+                            printf("%x", (unsigned char)client_message[k+i]);
+                        printf("\n");
+
+                        // find the slot in hash table
+                        md_ptr  = (unsigned char *)&client_message[k];
+                        slot = xor_fold(md_ptr);
+                        // slot %= ENTRIES;
+                        printf("slot = %u\n", slot);
+
+                        // inquiry
+                        if (inquiry(slot, md_ptr) == -1) 
+                            sprintf(server_message, "NOT-FOUND");
+                        else
+                            sprintf(server_message, "FOUND");
+                        break;
                     case FETCH:
                         puts("call fetch");
                         //get md5
@@ -271,7 +294,6 @@ int main(int argc , char *argv[])
                             b64_sz++;                       
                         
                         // decode base64
-                        
                         de_blk = base64_decode(client_message + b64_start, b64_sz, &de_size);
 
 

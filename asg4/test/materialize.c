@@ -29,6 +29,9 @@ void packet(unsigned char * md, char * msg) {
 
 
 size_t parse(char * msg, char * b64) {
+	// parse the received message to get base 64 block
+
+	// get base 64 block
 	size_t len = 0;
 	char str[] = "FOUND";
 	if (!strncmp(msg, str, 5)) {
@@ -45,7 +48,7 @@ int connect_server() {
 	// create socket and connect to server
     int sock;
     struct sockaddr_in server;
-    char message[1000] , server_reply[2000];
+    // char message[1000] , server_reply[2000];
     // char b64_blk[400];
     // unsigned char msg_digest[100];
      
@@ -104,7 +107,7 @@ int main(int argc , char *argv[])
 
     // int n;
    
-    // open a file
+    // open a file-recipe
     char * recipe = argv[1];
     // printf("filename is %s\n", filename);
     FILE * fp;
@@ -114,7 +117,7 @@ int main(int argc , char *argv[])
         exit(-1);
     }
 
-    // create a file-recipe
+    // create a new file
     char * newfile = argv[2];
     int fileDes = open(newfile, O_RDWR | O_CREAT | O_TRUNC );
     if (fileDes == -1) {
@@ -124,10 +127,13 @@ int main(int argc , char *argv[])
     fchmod(fileDes, 0666);
  	
 	
-	unsigned char msg_digest[16];
+
+
+	
    
     //read file to block
     int bytes;
+    unsigned char msg_digest[16];
     memset(msg_digest, 0, MD_LEN);
 
     while ((bytes = fread(msg_digest, 1, MD_LEN, fp)) > 0) {
@@ -143,11 +149,11 @@ int main(int argc , char *argv[])
 	    }
 	    printf("\n");
         
-  		// pack command and 3 parameters 
+  		// pack command and message digest
 	    int msg_sz;
 		msg_sz = FETCH_LEN + MD5_LEN + COMMA;
 
-		printf("my message size: %d\n", msg_sz);
+		// printf("my message size: %d\n", msg_sz);
 
 	    char * message = malloc(msg_sz);
         packet(msg_digest, message);
@@ -174,6 +180,7 @@ int main(int argc , char *argv[])
 	    if( (n = read(sock , server_reply , 119)) < 0)
 	    {
 	        puts("recv failed");
+	        break;
 	    }
 
 
@@ -200,6 +207,9 @@ int main(int argc , char *argv[])
 	    	// store the block in local file
 	  		lseek(fileDes, 0, SEEK_CUR);
 	  		write(fileDes, de_blk, de_sz);
+
+	  		base64_cleanup();
+            free(de_blk);			
 
 	    } // end else
 
