@@ -1,7 +1,7 @@
-
-#ifndef BASE64_H
-#define BASE64_H
-
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 
 static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
@@ -15,19 +15,12 @@ static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 static char *decoding_table = NULL;
 static int mod_table[] = {0, 2, 1};
 
-
 void build_decoding_table() {
-    
+
     decoding_table = malloc(256);
-    
+
     for (int i = 0; i < 64; i++)
         decoding_table[(unsigned char) encoding_table[i]] = i;
-}
-
-
-void base64_cleanup() {
-    free(decoding_table);
-    decoding_table = NULL;
 }
 
 char *base64_encode(const unsigned char *data,
@@ -95,7 +88,26 @@ unsigned char *base64_decode(const char *data,
     return decoded_data;
 }
 
-#endif
+void base64_cleanup() {
+    free(decoding_table);
+    decoding_table = NULL;
+}
+
+// int main ( ) {
+//     char * input="afdfdfdf", * output, *origin;
+
+//     size_t size;
+//     output = base64_encode(input,  strlen(input), &size);
+//     printf("%s\n", output);
 
 
+//     size_t de_size;
+//     origin = base64_decode(output, size, &de_size);
+//     printf("ouput len= %d", de_size);
+//     printf("%s", origin);
+
+    
+
+//     return 0;
+//}
 
