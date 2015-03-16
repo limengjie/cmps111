@@ -16,14 +16,15 @@ void packet(unsigned char * md, char * msg) {
 
     // command
     k = INQUIRY_LEN;
-    memcpy(msg, "INQUIRY", k);
+    memcpy(msg, "INQRY", k);
 
     //comma
     msg[k++] = ',';
 
     //md5 string
     memcpy(msg+k, md, MD5_LEN);
-    k += MD5_LEN;    
+    k += MD5_LEN; 
+     
    
     // printf("actual message sz = %d\n", i);
 }
@@ -69,7 +70,6 @@ int main(int argc , char *argv[])
         exit(1);
     }
 
-   
 
     int sock = connect_server();
    
@@ -81,7 +81,6 @@ int main(int argc , char *argv[])
             puts("Send failed");
             return 1;
     }
-
 
 
     // open a file-recipe
@@ -99,14 +98,30 @@ int main(int argc , char *argv[])
     unsigned char msg_digest[16];
     memset(msg_digest, 0, MD_LEN);
     while (bytes = fread(msg_digest, 1, MD_LEN, fp) > 0) {
+
+        // //print md5 string
+        // int i;  
+        // printf("md:\n" );
+        // for (i = 0; i < 16; ++i) {
+        //     printf("%x", (unsigned char)msg_digest[i]);
+        // }
+        // printf("\n");
+
+
+
         // pack command and message digest
         int msg_sz;
-        msg_sz = FETCH_LEN + MD5_LEN + COMMA;
-
+        msg_sz = INQUIRY_LEN + MD5_LEN + COMMA;
         // printf("my message size: %d\n", msg_sz);
 
         char * message = malloc(msg_sz);
         packet(msg_digest, message);
+
+        // printf("client md5:");
+        // for (i = 0; i < MD5_LEN; ++i)
+        //     printf("%x", (unsigned char)message[8+i]);
+        // puts(" ");
+
 
         // send message
         if( write(sock , message , msg_sz) < 0)
@@ -114,7 +129,8 @@ int main(int argc , char *argv[])
             puts("Send failed");
             return 1;
         }
-
+        
+        memset(msg_digest, 0, MD_LEN);
         
 
         //Receive a reply from the server

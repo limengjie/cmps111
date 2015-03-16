@@ -147,14 +147,14 @@ int main(int argc , char *argv[])
 		unsigned char msg_digest[16];
     	MDString(block, msg_digest);
 
-    	//print md5 string
-        int j;  
-        printf("message digest:\n" );
-	    for (j = 0; j < 16; ++j) {
-	        printf("%x", (unsigned char)msg_digest[j]);
-            // msg_digest[i] += '0';
-	    }
-	    printf("\n--------------------------------\n");
+    	// //print md5 string
+     //    int j;  
+     //    printf("message digest:\n" );
+	    // for (j = 0; j < 16; ++j) {
+	    //     printf("%x", (unsigned char)msg_digest[j]);
+     //        // msg_digest[i] += '0';
+	    // }
+	    // printf("\n--------------------------------\n");
 
 	    // add message digest to file recipe
 	    lseek(fileDes, 0, SEEK_CUR);
@@ -164,7 +164,7 @@ int main(int argc , char *argv[])
 	    int msg_sz;
 		msg_sz = INSERT_LEN + MD5_LEN + SIZE_OF_INT + b64_blk_len + COMMA*3;
 
-		printf("message size: %d\n", msg_sz);
+		// printf("message size: %d\n", msg_sz);
 
 	    char * message = malloc(msg_sz);
         packet(msg_digest, b64_blk, b64_blk_len, message);

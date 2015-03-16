@@ -11,7 +11,7 @@
 
 #define INSERT_LEN strlen("INSERT")
 #define FETCH_LEN strlen("FETCH")
-#define INQUIRY_LEN strlen("INQUIRY")
+#define INQUIRY_LEN strlen("INQRY")
 #define FOUND_LEN strlen("FOUND")
 #define MD5_LEN 16
 #define SIZE_OF_INT sizeof(int)
@@ -28,12 +28,12 @@
 // parse message
 int get_operation(char *cmd)
 {
-    char str[][7] = { "INQUIRY" , "FETCH" , "INSERT", "DELETE"};
+    char str[][7] = { "INQRY" , "FETCH" , "INSERT", "DELETE"};
     // int n;
 
     // char fn_file[20];
     int op;
-    if (!strncmp (str[0],cmd, 7)){
+    if (!strncmp (str[0],cmd, 5)){
         op = INQUIRY;
 
     }

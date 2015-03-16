@@ -111,7 +111,7 @@ void packet_back(char * b64, size_t size, char * msg) {
     //b64
     memcpy(msg+k, b64, size);
     k += size;
-    printf("size = %d\n", size);
+    // printf("size = %d\n", size);
 
     //comma
     msg[k++] = ',';
@@ -121,7 +121,7 @@ void packet_back(char * b64, size_t size, char * msg) {
 
     k += sizeof(int);
 
-    printf("total msg sz is %d\n", k);
+    // printf("total msg sz is %d\n", k);
 
 }
 
@@ -225,15 +225,16 @@ int main(int argc , char *argv[])
                         puts("call inquiry");
                          //print md5 string
                         k = INQUIRY_LEN + 1;
-                        printf("server md5:");
-                        for (i = 0; i < MD5_LEN; ++i)
-                            printf("%x", (unsigned char)client_message[k+i]);
-                        printf("\n");
+                        
 
                         // find the slot in hash table
                         md_ptr  = (unsigned char *)&client_message[k];
                         slot = xor_fold(md_ptr);
                         // printf("slot = %u\n", slot);
+                        // printf("server md5:");
+                        // for (i = 0; i < MD5_LEN; ++i)
+                        //     printf("%x", (unsigned char)client_message[k+i]);
+                        // puts(" ");
 
                         // inquiry
                         if (inquiry(slot, md_ptr) == -1) 
@@ -246,11 +247,10 @@ int main(int argc , char *argv[])
                         //get md5
                         k = FETCH_LEN + 1;
                         md_ptr  = (unsigned char *)&client_message[k];
-                        for (i = 0; i < 16; ++i)
-                            printf("%x", md_ptr[i]);
-                        puts("\nrecv md5");
-                        // for (i = 0; i < MD_LEN; ++i)
-                        //     md[i] = client_message[i+6];
+                        // for (i = 0; i < MD5_LEN; ++i)
+                        //     printf("%x", md_ptr[i]);
+                        // puts(" ");
+                        
                         slot = xor_fold(md_ptr);
                         // printf("got slot %u\n", slot);
                         // search hash table
@@ -275,16 +275,16 @@ int main(int argc , char *argv[])
                         puts("call insert");
                         //print md5 string
                         k = INSERT_LEN + 1;
-                        printf("server md5:");
-                        for (i = 0; i < MD5_LEN; ++i)
-                            printf("%x", (unsigned char)client_message[k+i]);
-                        printf("\n");
+                        // printf("server md5:");
+                        // for (i = 0; i < MD5_LEN; ++i)
+                        //     printf("%x", (unsigned char)client_message[k+i]);
+                        // printf("\n");
 
                         // find the slot in hash table
                         md_ptr  = (unsigned char *)&client_message[k];
                         slot = xor_fold(md_ptr);
                         // slot %= ENTRIES;
-                        printf("slot = %u\n", slot);
+                        // printf("slot = %u\n", slot);
 
 
                         // base 64 block
