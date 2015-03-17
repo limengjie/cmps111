@@ -11,12 +11,6 @@
 // #include "singleInstanceStore.c"
 
 
-// extern int initialize(char *file, int length, int size);
-// extern int insert(char *key, void *value, int length);
-// extern int fetch (char *key, void *value, int *length);
-// extern int delete(char *key);
-// extern int probe(char *key);
-
 extern int initialize(char *file, int size);
 extern long insert(int slot, char *key, void *value, int length);
 extern int inquiry(unsigned slot, char * key);
@@ -65,28 +59,28 @@ int setup_server() {
 
 
 
-void parse (char * msg, unsigned char * msg_digest, char * block, size_t * size) {
-    int i, j, k;
-    // *size = (size_t)msg[strlen(msg) - 1];
-    // get block length
-    i = get_pos(msg, ',', 3);
-    *size = n2h_len((int *)&msg[i]);
-    // printf("size=%d\n", *size);
-    // get message digest
-    i = get_pos(msg, ',', 1);
-    // printf("md5's pos = %d\n", i);
-    // printf("size of size_t = %d\n", sizeof(size_t));
-    // the res should be 7
-    for (j = 0; j < MD_LEN; ++i, ++j) 
-        msg_digest[j] = msg[i];
-    // get base 64 block    
-    i = get_pos(msg, ',', 2);
-    // printf("b64's pos = %d\n", i); // i should be 24?
-    for (j = 0; j < *size; ++j, ++i)
-        block[j] = msg[i];
-    // block[j] = '\0';
-    // printf("before decode:%s\n", block);
-}
+// void parse (char * msg, unsigned char * msg_digest, char * block, size_t * size) {
+//     int i, j, k;
+//     // *size = (size_t)msg[strlen(msg) - 1];
+//     // get block length
+//     i = get_pos(msg, ',', 3);
+//     *size = n2h_len((int *)&msg[i]);
+//     // printf("size=%d\n", *size);
+//     // get message digest
+//     i = get_pos(msg, ',', 1);
+//     // printf("md5's pos = %d\n", i);
+//     // printf("size of size_t = %d\n", sizeof(size_t));
+//     // the res should be 7
+//     for (j = 0; j < MD_LEN; ++i, ++j) 
+//         msg_digest[j] = msg[i];
+//     // get base 64 block    
+//     i = get_pos(msg, ',', 2);
+//     // printf("b64's pos = %d\n", i); // i should be 24?
+//     for (j = 0; j < *size; ++j, ++i)
+//         block[j] = msg[i];
+//     // block[j] = '\0';
+//     // printf("before decode:%s\n", block);
+// }
 
 unsigned xor_fold(unsigned char * msg_digest) {
     unsigned xor_r = 0x0, i;

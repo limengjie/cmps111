@@ -255,7 +255,7 @@ int inquiry(unsigned slot, char * key) {
 		}
 
 		if (found != -1)
-			printf("block is existed\n");
+			printf("block exists\n");
 		else
 			puts("not found");
 
@@ -266,7 +266,7 @@ int inquiry(unsigned slot, char * key) {
 int fetch (unsigned slot, char *key, void *value, int *length){
 	int pos = inquiry(slot, key);
 
-	if(pos) {
+	if(pos != -1) {
 		//read data from append log
 		//get index
 		unsigned long index = fileIndex(pos);
