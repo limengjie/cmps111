@@ -86,12 +86,21 @@ int main(int argc , char *argv[])
     // open a file-recipe
     char * recipe = argv[1];
     // printf("filename is %s\n", filename);
-    FILE * fp;
-    fp = fopen(recipe, "r");
-    if (fp == NULL) {
+    FILE * rfp;
+    rfp = fopen(recipe, "r");
+    if (rfp == NULL) {
         fprintf(stderr, "no such file!\n");
         exit(-1);
     }
+    
+
+    // read metadata
+    int protect;
+    unsigned long file_size;
+    char file_name[200];
+    
+    fscanf(rfp, "%o,%ld,%s",&protect, &file_size, file_name);
+
 
     // create a new file
     char * newfile = argv[2];
@@ -100,7 +109,7 @@ int main(int argc , char *argv[])
         fprintf(stderr, "fail to create a file!\n");
         exit(-1);
     }
-    fchmod(fileDes, 0666);
+    fchmod(fileDes, protect);
  	
 	
 
@@ -109,10 +118,14 @@ int main(int argc , char *argv[])
    
     //read file to block
     int bytes;
-    unsigned char msg_digest[16];
-    memset(msg_digest, 0, MD_LEN);
-    while ((bytes = fread(msg_digest, 1, MD_LEN, fp)) > 0) {
+    char md5_str[MD5_LEN + 1];
+    unsigned char msg_digest[MD5_LEN];
+    memset(msg_digest, 0, MD5_LEN);
+    // while ((bytes = fread(md5_str, 1, MD_LEN + 1, rfp)) > 0) {
+    while (fscanf(rfp, "%s", md5_str) != EOF) {    
     	
+        printf("md5 string: %s\n", md5_str);
+        gen_md5(md5_str, msg_digest);
     	// //md5 string of the block
     	// MDString(block, msg_digest);
 

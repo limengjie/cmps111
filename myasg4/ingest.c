@@ -5,6 +5,8 @@
 #include <arpa/inet.h> //inet_addr
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h> /*stat()*/
+#include <limits.h> /* PATH_MAX */
 
 #include "md5.h"
 #include "base64.h"
@@ -81,6 +83,33 @@ void packet(unsigned char * md, char * b64, size_t b64_size, char *msg) {
     return ;
 }
 
+void write_metadata(char *orig, FILE* recipe)
+{
+    struct stat fileStat;
+    if(stat(orig, &fileStat) < 0)
+    {
+        printf("Error: can not read the metadata of original file.\n");
+        exit(-1);
+    }
+    fprintf(recipe, "0%o,", fileStat.st_mode & 0777);
+    fprintf(recipe, "%d,", fileStat.st_size);
+
+    
+    char buf[PATH_MAX + 1]; /* not sure about the "+ 1" */
+    // char buf[PATH_MAX]; 
+    char *path = realpath(orig, buf);
+    if (path)
+    {
+        fprintf(recipe, "%s\n", buf);
+    }
+    else
+    {
+        printf("Error: can not find the path of the orignal file.\n");
+        exit(-1);
+    }
+}
+
+
 int main(int argc , char *argv[])
 {
 	if (argc != 3) {
@@ -93,6 +122,7 @@ int main(int argc , char *argv[])
 	char server_reply[2000];
  
 
+    //send the type of the request in advance
     char type = 'i';
     if( write(sock , &type, 1) < 0)
     {
@@ -114,14 +144,24 @@ int main(int argc , char *argv[])
 
     // create a file-recipe
     char * rfilename = argv[2];
-    int fileDes = open(rfilename, O_RDWR | O_CREAT | O_TRUNC );
-    if (fileDes == -1) {
-        fprintf(stderr, "fail to create a file!\n");
+    FILE * rfp;
+    rfp = fopen(rfilename, "w");
+    if(rfp == NULL)
+    {
+        fclose(fp);
+        printf("Error: can not open the recipe file.\n");
         exit(-1);
     }
-    fchmod(fileDes, 0666);
+    // int fileDes = open(rfilename, O_RDWR | O_CREAT | O_TRUNC );
+    // if (fileDes == -1) {
+    //     fprintf(stderr, "fail to create a file!\n");
+    //     exit(-1);
+    // }
+    // fchmod(fileDes, 0666);
 
 
+    //write the metadata to file-recipe
+    write_metadata(filename, rfp);
 
  	
     //read file to block
@@ -157,8 +197,11 @@ int main(int argc , char *argv[])
 	    // printf("\n--------------------------------\n");
 
 	    // add message digest to file recipe
-	    lseek(fileDes, 0, SEEK_CUR);
-	    write(fileDes, msg_digest, 16);
+        for (i = 0; i < 16; i++)
+            fprintf (rfp, "%02x", msg_digest[i]);
+        fprintf (rfp, "\n");
+	    // lseek(fileDes, 0, SEEK_CUR);
+	    // write(fileDes, msg_digest, 16);
 
 	    // pack command and 3 parameters 
 	    int msg_sz;
@@ -200,5 +243,7 @@ int main(int argc , char *argv[])
     
      
     close(sock);
+    fclose(fp);
+    fclose(rfp);
     return 0;
 }

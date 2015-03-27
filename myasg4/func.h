@@ -100,4 +100,23 @@ size_t n2h_len(int * intp) {
     return slen; 
 }
 
+int toInt(char c)
+{
+    if (c >= '0' && c <= '9') return      c - '0';
+    if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+    if (c >= 'a' && c <= 'f') return 10 + c - 'a';
+    return -1;
+}
+
+void gen_md5(char *input, unsigned char *output)
+{
+    int i;
+    for (i = 0; i != MD5_LEN; ++i)
+    {
+        output[i] = (unsigned char)(16 * toInt(input[2*i]) + toInt(input[2*i+1]));
+        //printf("%02x", output[i]);
+    }
+    //printf("\n");
+}
+
 
