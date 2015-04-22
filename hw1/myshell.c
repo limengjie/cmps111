@@ -155,7 +155,7 @@ void Pipe(char **cmd1, char **cmd2) {
             execvp(cmd2[0], cmd2);
     default:
             dup2(fd[1], 1);
-            wait(&status);
+            /* wait(&status);*/
             close(fd[0]);
             execvp(cmd1[0], cmd1);
   }
@@ -203,7 +203,6 @@ int main() {
 
     /* fork and execute */
     if (opt == CD) {
-      puts("call cd");
       cd(cmd2[0]);
     }
     else {
